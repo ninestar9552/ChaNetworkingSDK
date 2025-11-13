@@ -1,0 +1,111 @@
+//
+//  NetworkClient.swift
+//  ChaNetworkingSDK
+//
+//  Created by cha on 11/10/25.
+//
+
+import Foundation
+import Alamofire
+import Combine
+
+// MARK: - Network Client Core
+/// `NetworkClient`는 모든 API 요청의 진입점입니다.
+/// - `session`: Alamofire Session (ex: 인증옵션/인터셉터 포함)
+/// - `encoding`: 디폴트 파라미터 인코딩 전략
+/// - `errorHandler`: 에러 처리 전략 주입 가능 (사용자 커스텀 허용)
+open class NetworkClient {
+    public let session: Session
+    public let encoding: ParameterEncoding
+    public let errorHandler: NetworkErrorHandler
+
+    public init(
+        session: Session,
+        encoding: ParameterEncoding = JSONEncoding(options: .prettyPrinted),
+        errorHandler: NetworkErrorHandler = DefaultNetworkErrorHandler()
+    ) {
+        self.session = session
+        self.encoding = encoding
+        self.errorHandler = errorHandler
+    }
+}
+
+@available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
+extension NetworkClient {
+    /// API 요청을 수행하고 디코딩된 모델을 반환합니다. (Swift Concurrency 버전)
+    /// - Returns:
+    ///   `ApiResponse<T>` (값 + 원본 Data + HTTPURLResponse 제공)
+    public func responseData<T: Codable>(
+        _ httpMethod: Alamofire.HTTPMethod,
+        _ url: String,
+        parameters: Parameters? = nil,
+        encoding: ParameterEncoding? = nil,
+        headers: [String: String]? = nil,
+        decoder: JSONDecoder = JSONDecoder(),
+        logging: Bool = true
+    ) async throws -> ApiResponse<T> {
+
+        var httpHeaders = HTTPHeaders(headers ?? [:])
+        httpHeaders.update(.contentType("application/json"))
+        httpHeaders.update(.accept("application/json"))
+
+        let dataRequest: DataRequest = self.session.request(
+            url,
+            method: httpMethod,
+            parameters: parameters,
+            encoding: encoding ?? self.encoding,
+            headers: httpHeaders
+        )
+
+        return try await dataRequest.serializedResponse(using: self, decoder: decoder, logging: logging)
+    }
+
+
+
+    /// API 요청을 수행하고 디코딩된 모델을 반환합니다.
+    ///
+    /// - Parameters:
+    ///   - httpMethod: GET / POST 등 HTTP 메서드
+    ///   - url: 요청 URL 문자열
+    ///   - parameters: Request Body 또는 Query Parameters
+    ///   - encoding: 파라미터 인코딩 전략 (기본값: JSONEncoding)
+    ///   - headers: 추가 Header 값
+    ///   - decoder: JSONDecoder (기본값: JSONDecoder())
+    ///   - logging: 요청/응답 로그 출력 여부 (기본값: true)
+    ///
+    /// - Returns:
+    ///   Combine `AnyPublisher<ApiResponse<T>, Error>`
+    ///
+    /// 서비스 앱에서 사용 예:
+    /// ```
+    /// client.responseData(.get, "/users")
+    ///     .sink(receiveCompletion: ..., receiveValue: { response in
+    ///         print(response.value)
+    ///     })
+    /// ```
+    @available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
+    public func responseDataPublisher<T: Codable>(
+        _ httpMethod: Alamofire.HTTPMethod,
+        _ url: String,
+        parameters: Parameters? = nil,
+        encoding: ParameterEncoding? = nil,
+        headers: [String: String]? = nil,
+        decoder: JSONDecoder = JSONDecoder(),
+        logging: Bool = true
+    )-> AnyPublisher<ApiResponse<T>, Error> {
+
+        var httpHeaders = HTTPHeaders(headers ?? [:])
+        httpHeaders.update(HTTPHeader.contentType("application/json"))
+        httpHeaders.update(HTTPHeader.accept("application/json"))
+
+        let dataRequest: DataRequest = self.session.request(
+            url,
+            method: httpMethod,
+            parameters: parameters,
+            encoding: encoding ?? self.encoding,
+            headers: httpHeaders
+        )
+
+        return dataRequest.publish(using: self, decoder: decoder, logging: logging)
+    }
+}
