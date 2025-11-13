@@ -50,13 +50,12 @@ extension DataRequest {
     @available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
     internal func serializedResponse<T: Codable>(
         using client: NetworkClient,
-        decoder: JSONDecoder,
-        logging: Bool
+        decoder: JSONDecoder
     ) async throws -> ApiResponse<T> {
 
         let dataResponse = await self.serializingData().response
 
-        self.log(dataResponse: dataResponse, logging: logging)
+        self.log(dataResponse: dataResponse, logging: client.logging)
 
         return try self.processResponse(dataResponse, decoder: decoder, errorHandler: client.errorHandler)
     }
@@ -76,14 +75,13 @@ extension DataRequest {
     @available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
     internal func publish<T: Codable>(
         using client: NetworkClient,
-        decoder: JSONDecoder,
-        logging: Bool
+        decoder: JSONDecoder
     ) -> AnyPublisher<ApiResponse<T>, Error> {
 
         return self.publishData()
             .tryMap { dataResponse in
 
-                self.log(dataResponse: dataResponse, logging: logging)
+                self.log(dataResponse: dataResponse, logging: client.logging)
 
                 return try self.processResponse(dataResponse, decoder: decoder, errorHandler: client.errorHandler)
             }

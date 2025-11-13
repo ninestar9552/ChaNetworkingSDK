@@ -23,12 +23,12 @@ final class NetworkClientTests {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockURLProtocol.self]
         let session = Session(configuration: configuration)
-        client = NetworkClient(session: session)
-        
+        client = NetworkClient(session: session, logging: true)
+
         let configuration2 = URLSessionConfiguration.ephemeral
         configuration2.protocolClasses = [MockURLProtocol2.self]
         let session2 = Session(configuration: configuration2)
-        client2 = NetworkClient(session: session2)
+        client2 = NetworkClient(session: session2, logging: true)
     }
 
     // MARK: - Swift Concurrency Test

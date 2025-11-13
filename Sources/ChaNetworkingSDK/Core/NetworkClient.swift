@@ -14,19 +14,23 @@ import Combine
 /// - `session`: Alamofire Session (ex: 인증옵션/인터셉터 포함)
 /// - `encoding`: 디폴트 파라미터 인코딩 전략
 /// - `errorHandler`: 에러 처리 전략 주입 가능 (사용자 커스텀 허용)
+/// - `logging`: 요청/응답 로깅 활성화 여부
 open class NetworkClient {
     public let session: Session
     public let encoding: ParameterEncoding
     public let errorHandler: NetworkErrorHandler
+    public let logging: Bool
 
     public init(
         session: Session,
         encoding: ParameterEncoding = JSONEncoding(options: .prettyPrinted),
-        errorHandler: NetworkErrorHandler = DefaultNetworkErrorHandler()
+        errorHandler: NetworkErrorHandler = DefaultNetworkErrorHandler(),
+        logging: Bool = false
     ) {
         self.session = session
         self.encoding = encoding
         self.errorHandler = errorHandler
+        self.logging = logging
     }
 }
 
@@ -41,8 +45,7 @@ extension NetworkClient {
         parameters: Parameters? = nil,
         encoding: ParameterEncoding? = nil,
         headers: [String: String]? = nil,
-        decoder: JSONDecoder = JSONDecoder(),
-        logging: Bool = true
+        decoder: JSONDecoder = JSONDecoder()
     ) async throws -> ApiResponse<T> {
 
         var httpHeaders = HTTPHeaders(headers ?? [:])
@@ -57,7 +60,7 @@ extension NetworkClient {
             headers: httpHeaders
         )
 
-        return try await dataRequest.serializedResponse(using: self, decoder: decoder, logging: logging)
+        return try await dataRequest.serializedResponse(using: self, decoder: decoder)
     }
 
 
@@ -71,7 +74,6 @@ extension NetworkClient {
     ///   - encoding: 파라미터 인코딩 전략 (기본값: JSONEncoding)
     ///   - headers: 추가 Header 값
     ///   - decoder: JSONDecoder (기본값: JSONDecoder())
-    ///   - logging: 요청/응답 로그 출력 여부 (기본값: true)
     ///
     /// - Returns:
     ///   Combine `AnyPublisher<ApiResponse<T>, Error>`
@@ -90,8 +92,7 @@ extension NetworkClient {
         parameters: Parameters? = nil,
         encoding: ParameterEncoding? = nil,
         headers: [String: String]? = nil,
-        decoder: JSONDecoder = JSONDecoder(),
-        logging: Bool = true
+        decoder: JSONDecoder = JSONDecoder()
     )-> AnyPublisher<ApiResponse<T>, Error> {
 
         var httpHeaders = HTTPHeaders(headers ?? [:])
@@ -106,6 +107,6 @@ extension NetworkClient {
             headers: httpHeaders
         )
 
-        return dataRequest.publish(using: self, decoder: decoder, logging: logging)
+        return dataRequest.publish(using: self, decoder: decoder)
     }
 }
