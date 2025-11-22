@@ -10,25 +10,16 @@ import ChaNetworkingSDK
 import Alamofire
 
 // MARK: - Mock URL Protocol
-actor HandlerStore {
+final class HandlerStore {
     static private let queue = DispatchQueue(label: "handlerstore.queue")
-    static private var _store: [String: ((URLRequest) -> (HTTPURLResponse, Data))] = [:]
-    
-    static var handlerStore: [String: ((URLRequest) -> (HTTPURLResponse, Data))] {
-        get {
-            return queue.sync { _store }
-        }
-        set {
-            queue.sync { _store = newValue }
-        }
-    }
-    
+    nonisolated(unsafe) static private var _store: [String: ((URLRequest) -> (HTTPURLResponse, Data))] = [:]
+
     static func set(_ key: String, handler: @escaping (URLRequest) -> (HTTPURLResponse, Data)) {
         queue.sync {
             _store[key] = handler
         }
     }
-    
+
     static func get(_ key: String) -> ((URLRequest) -> (HTTPURLResponse, Data))? {
         queue.sync {
             _store[key]
@@ -46,7 +37,7 @@ final class MockURLProtocol: URLProtocol {
             fatalError("Missing X-Test-ID")
         }
         
-        guard let handler = HandlerStore.handlerStore[key] else {
+        guard let handler = HandlerStore.get(key) else {
             fatalError("Handler not set")
         }
 
