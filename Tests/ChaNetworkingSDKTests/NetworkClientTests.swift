@@ -35,7 +35,7 @@ final class NetworkClientTests {
         let (client, key) = createTestClient()
         
         let mockJSON = #"{"id":1,"name":"Soo"}"#.data(using: .utf8)!
-        HandlerStore.set(key) { request in
+        MockURLProtocol.setHandler(key) { request in
             let response = HTTPURLResponse(
                 url: request.url!,
                 statusCode: 200,
@@ -57,7 +57,7 @@ final class NetworkClientTests {
         let (client, key) = createTestClient()
         
         let mockJSON = #"{"error":"Unauthorized"}"#.data(using: .utf8)!
-        HandlerStore.set(key) { request in
+        MockURLProtocol.setHandler(key) { request in
             let response = HTTPURLResponse(
                 url: request.url!,
                 statusCode: 401,
@@ -86,7 +86,7 @@ final class NetworkClientTests {
         let (client, key) = createTestClient()
         
         let mockJSON = #"{"id":1,"name":"Soo"}"#.data(using: .utf8)!
-        HandlerStore.set(key) { request in
+        MockURLProtocol.setHandler(key) { request in
             let response = HTTPURLResponse(
                 url: request.url!,
                 statusCode: 200,
@@ -114,7 +114,7 @@ final class NetworkClientTests {
         let (client, key) = createTestClient()
         
         let mockJSON = #"{"error":"Unauthorized"}"#.data(using: .utf8)!
-        HandlerStore.set(key) { request in
+        MockURLProtocol.setHandler(key) { request in
             let response = HTTPURLResponse(
                 url: request.url!,
                 statusCode: 401,
