@@ -26,10 +26,16 @@ extension DataRequest {
 
         // transform()이 response/data nil을 커버하지 않을 가능성을 대비 (Fail-safe)
         guard let httpResponse = dataResponse.response else { throw NetworkError.noResponse }
-        guard let data = dataResponse.data else { throw NetworkError.noData }
+
+        // 빈 응답 처리: EmptyResponse 타입일 때만 허용
+        let data = dataResponse.data ?? Data()
+        if data.isEmpty && T.self != EmptyResponse.self {
+            throw NetworkError.noData
+        }
 
         do {
-            let decodedValue = try decoder.decode(T.self, from: data)
+            let dataToDecodable = data.isEmpty ? "{}".data(using: .utf8)! : data
+            let decodedValue = try decoder.decode(T.self, from: dataToDecodable)
             return ApiResponse(value: decodedValue, data: data, httpResponse: httpResponse)
         } catch {
             throw NetworkError.decodingFailed(error)

@@ -17,13 +17,14 @@ public struct DefaultNetworkErrorHandler: NetworkErrorHandler {
     public func transform(response: HTTPURLResponse?, data: Data?, error: AFError?) -> Error? {
         if let error = error { return NetworkError.underlying(error) }
         guard let response = response else { return NetworkError.noResponse }
-        guard let data = data else { return NetworkError.noData }
 
-        if !(200..<300).contains(response.statusCode) {
-            let message = String(data: data, encoding: .utf8)
-            return NetworkError.serverError(statusCode: response.statusCode, message: message)
+        // 성공 응답
+        if (200..<300).contains(response.statusCode) {
+            return nil
         }
 
-        return nil
+        // 실패 응답인 경우 statusCode 우선 반환 (message는 optional)
+        let message = data.flatMap { String(data: $0, encoding: .utf8) }
+        return NetworkError.serverError(statusCode: response.statusCode, message: message)
     }
 }
