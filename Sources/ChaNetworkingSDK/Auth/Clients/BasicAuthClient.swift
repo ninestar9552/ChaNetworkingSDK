@@ -12,7 +12,7 @@ import Combine
 /// Basic Authentication을 사용하는 Network Client
 /// - 자동으로 모든 요청에 Basic Auth 헤더 추가
 @available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
-open class BasicAuthClient: NetworkClient {
+open class BasicAuthClient: NetworkClient, AuthenticatedClient {
     public let baseURL: String
 
     /// BasicAuthClient 초기화
@@ -50,63 +50,5 @@ open class BasicAuthClient: NetworkClient {
             errorHandler: errorHandler,
             logging: logging
         )
-    }
-
-    // MARK: - Convenience Methods
-
-    /// API 요청 (async/await) - 상대 경로 자동 결합
-    /// - Parameters:
-    ///   - httpMethod: HTTP 메서드
-    ///   - path: API 경로 (예: "/users")
-    ///   - parameters: 요청 파라미터
-    ///   - encoding: 파라미터 인코딩 (기본값: 클라이언트 설정)
-    ///   - headers: 추가 헤더
-    ///   - decoder: JSON 디코더
-    public func request<T: Codable>(
-        _ httpMethod: Alamofire.HTTPMethod,
-        _ path: String,
-        parameters: Parameters? = nil,
-        encoding: ParameterEncoding? = nil,
-        headers: [String: String]? = nil,
-        decoder: JSONDecoder = JSONDecoder()
-    ) async throws -> ApiResponse<T> {
-        let fullURL = buildURL(path: path)
-        return try await responseData(
-            httpMethod,
-            fullURL,
-            parameters: parameters,
-            encoding: encoding,
-            headers: headers,
-            decoder: decoder
-        )
-    }
-
-    /// API 요청 (Combine) - 상대 경로 자동 결합
-    public func requestPublisher<T: Codable>(
-        _ httpMethod: Alamofire.HTTPMethod,
-        _ path: String,
-        parameters: Parameters? = nil,
-        encoding: ParameterEncoding? = nil,
-        headers: [String: String]? = nil,
-        decoder: JSONDecoder = JSONDecoder()
-    ) -> AnyPublisher<ApiResponse<T>, Error> {
-        let fullURL = buildURL(path: path)
-        return responseDataPublisher(
-            httpMethod,
-            fullURL,
-            parameters: parameters,
-            encoding: encoding,
-            headers: headers,
-            decoder: decoder
-        )
-    }
-
-    // MARK: - Private Helpers
-    private func buildURL(path: String) -> String {
-        if path.starts(with: "http://") || path.starts(with: "https://") {
-            return path
-        }
-        let cleanPath = path.hasPrefix("/") ? path : "/\(path)"
-        return baseURL + cleanPath
     }
 }

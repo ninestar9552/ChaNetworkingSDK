@@ -127,7 +127,7 @@ final class BasicAuthClientTests {
     @Test func testUnauthorizedError() async throws {
         // Given: 클라이언트 생성
         let (client, key) = createTestClient()
-        
+
         let mockJSON = #"{"error":"Invalid credentials"}"#.data(using: .utf8)!
         MockURLProtocol.setHandler(key) { request in
             let response = HTTPURLResponse(
@@ -151,5 +151,66 @@ final class BasicAuthClientTests {
                 #expect(false, "Unexpected error type: \(error)")
             }
         }
+    }
+
+    // MARK: - Server Error Test (404)
+    @Test func testServerError() async throws {
+        // Given: 클라이언트 생성
+        let (client, key) = createTestClient()
+
+        let mockJSON = #"{"error":"Not Found"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 404,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        do {
+            let _: ApiResponse<MockUser> = try await client.get("/users/999")
+            #expect(false, "Expected error was not thrown")
+        } catch let error as NetworkError {
+            switch error {
+            case .serverError(let code, let message):
+                #expect(code == 404)
+                #expect(message == #"{"error":"Not Found"}"#)
+            default:
+                #expect(false, "Unexpected error type: \(error)")
+            }
+        }
+    }
+
+    // MARK: - URL Building Test
+    @Test func testURLBuilding() async throws {
+        // Given: 클라이언트 생성
+        let (client, key) = createTestClient()
+
+        var capturedURLs: [String] = []
+        let mockJSON = #"{"id":1,"name":"Test"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            capturedURLs.append(request.url?.absoluteString ?? "")
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        // 상대 경로 (슬래시 있음)
+        let _: ApiResponse<MockUser> = try await client.get("/users/1")
+        #expect(capturedURLs.last == "https://api.example.com/users/1")
+
+        // 상대 경로 (슬래시 없음)
+        let _: ApiResponse<MockUser> = try await client.get("posts/1")
+        #expect(capturedURLs.last == "https://api.example.com/posts/1")
+
+        // 전체 URL (그대로 사용)
+        let _: ApiResponse<MockUser> = try await client.get("https://other-api.com/data")
+        #expect(capturedURLs.last == "https://other-api.com/data")
     }
 }
