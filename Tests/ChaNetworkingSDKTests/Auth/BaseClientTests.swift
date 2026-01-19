@@ -210,4 +210,98 @@ final class BaseClientTests {
         let _: ApiResponse<MockUser> = try await client.get("https://other-api.com/data")
         #expect(capturedURLs.last == "https://other-api.com/data")
     }
+
+    // MARK: - Encodable Query Test
+    @Test func testEncodableQuery() async throws {
+        // Given: 클라이언트 생성
+        let (client, key) = createTestClient()
+
+        struct SearchQuery: Encodable {
+            let keyword: String
+            let page: Int
+            let limit: Int
+        }
+
+        var capturedURL: String?
+        let mockJSON = #"{"id":1,"name":"Test"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            capturedURL = request.url?.absoluteString
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        // When: Encodable 쿼리로 GET 요청
+        let query = SearchQuery(keyword: "test", page: 1, limit: 20)
+        let _: ApiResponse<MockUser> = try await client.get("/search", query: query)
+
+        // Then: URL에 쿼리 파라미터가 포함되어야 함
+        #expect(capturedURL?.contains("keyword=test") == true)
+        #expect(capturedURL?.contains("page=1") == true)
+        #expect(capturedURL?.contains("limit=20") == true)
+    }
+
+    // MARK: - Encodable Body Test
+    @Test func testEncodableBody() async throws {
+        // Given: 클라이언트 생성
+        let (client, key) = createTestClient()
+
+        struct CreateUserRequest: Encodable {
+            let name: String
+            let email: String
+        }
+
+        var capturedBody: [String: Any]?
+        let mockJSON = #"{"id":1,"name":"Test"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            // Body 캡처
+            if let bodyData = request.httpBodyStream {
+                let data = Data(reading: bodyData)
+                capturedBody = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            }
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 201,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        // When: Encodable body로 POST 요청
+        let body = CreateUserRequest(name: "Cha", email: "cha@example.com")
+        let _: ApiResponse<MockUser> = try await client.post("/users", body: body)
+
+        // Then: Body에 JSON이 포함되어야 함
+        #expect(capturedBody?["name"] as? String == "Cha")
+        #expect(capturedBody?["email"] as? String == "cha@example.com")
+    }
+}
+
+// MARK: - InputStream Helper
+private extension Data {
+    init(reading input: InputStream) {
+        self.init()
+        input.open()
+        defer { input.close() }
+
+        let bufferSize = 1024
+        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+        defer { buffer.deallocate() }
+
+        while input.hasBytesAvailable {
+            let read = input.read(buffer, maxLength: bufferSize)
+            if read < 0 {
+                break
+            } else if read == 0 {
+                break
+            }
+            self.append(buffer, count: read)
+        }
+    }
 }

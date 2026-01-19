@@ -63,6 +63,39 @@ extension NetworkClient {
         return try await dataRequest.serializedResponse(using: self, decoder: decoder)
     }
 
+    /// API 요청을 수행하고 디코딩된 모델을 반환합니다. (Encodable 파라미터 버전)
+    /// - Parameters:
+    ///   - httpMethod: HTTP 메서드
+    ///   - url: 요청 URL
+    ///   - parameters: Encodable 파라미터
+    ///   - encoder: ParameterEncoder (URLEncodedFormParameterEncoder 또는 JSONParameterEncoder)
+    ///   - headers: 추가 헤더
+    ///   - decoder: JSON 디코더
+    /// - Returns: `ApiResponse<T>`
+    public func responseData<T: Codable, P: Encodable & Sendable>(
+        _ httpMethod: Alamofire.HTTPMethod,
+        _ url: String,
+        parameters: P,
+        encoder: ParameterEncoder,
+        headers: [String: String]? = nil,
+        decoder: JSONDecoder = JSONDecoder()
+    ) async throws -> ApiResponse<T> {
+
+        var httpHeaders = HTTPHeaders(headers ?? [:])
+        httpHeaders.update(.contentType("application/json"))
+        httpHeaders.update(.accept("application/json"))
+
+        let dataRequest: DataRequest = self.session.request(
+            url,
+            method: httpMethod,
+            parameters: parameters,
+            encoder: encoder,
+            headers: httpHeaders
+        )
+
+        return try await dataRequest.serializedResponse(using: self, decoder: decoder)
+    }
+
 
 
     /// API 요청을 수행하고 디코딩된 모델을 반환합니다.
@@ -104,6 +137,39 @@ extension NetworkClient {
             method: httpMethod,
             parameters: parameters,
             encoding: encoding ?? self.encoding,
+            headers: httpHeaders
+        )
+
+        return dataRequest.publish(using: self, decoder: decoder)
+    }
+
+    /// API 요청을 수행하고 디코딩된 모델을 반환합니다. (Encodable 파라미터 + Combine 버전)
+    /// - Parameters:
+    ///   - httpMethod: HTTP 메서드
+    ///   - url: 요청 URL
+    ///   - parameters: Encodable 파라미터
+    ///   - encoder: ParameterEncoder (URLEncodedFormParameterEncoder 또는 JSONParameterEncoder)
+    ///   - headers: 추가 헤더
+    ///   - decoder: JSON 디코더
+    /// - Returns: `AnyPublisher<ApiResponse<T>, Error>`
+    public func responseDataPublisher<T: Codable, P: Encodable & Sendable>(
+        _ httpMethod: Alamofire.HTTPMethod,
+        _ url: String,
+        parameters: P,
+        encoder: ParameterEncoder,
+        headers: [String: String]? = nil,
+        decoder: JSONDecoder = JSONDecoder()
+    ) -> AnyPublisher<ApiResponse<T>, Error> {
+
+        var httpHeaders = HTTPHeaders(headers ?? [:])
+        httpHeaders.update(HTTPHeader.contentType("application/json"))
+        httpHeaders.update(HTTPHeader.accept("application/json"))
+
+        let dataRequest: DataRequest = self.session.request(
+            url,
+            method: httpMethod,
+            parameters: parameters,
+            encoder: encoder,
             headers: httpHeaders
         )
 

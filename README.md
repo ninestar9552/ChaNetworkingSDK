@@ -124,20 +124,56 @@ client.getPublisher("/users/1")
 `BaseClient`, `BearerTokenClient`, `BasicAuthClient`는 다음 편의 메서드를 제공합니다:
 
 ```swift
-// async/await
-client.get("/path")
-client.post("/path", parameters: [...])
+// async/await - Dictionary 파라미터
+client.get("/path", parameters: ["key": "value"])
+client.post("/path", parameters: ["name": "Cha"])
 client.put("/path", parameters: [...])
 client.patch("/path", parameters: [...])
 client.delete("/path")
 
-// Combine
-client.getPublisher("/path")
-client.postPublisher("/path", parameters: [...])
-client.putPublisher("/path", parameters: [...])
-client.patchPublisher("/path", parameters: [...])
-client.deletePublisher("/path")
+// async/await - Encodable 파라미터
+client.get("/path", query: SearchQuery(...))     // URL 쿼리
+client.post("/path", body: CreateRequest(...))   // JSON body
+client.put("/path", body: UpdateRequest(...))
+client.patch("/path", body: PatchRequest(...))
+client.delete("/path", query: DeleteQuery(...))  // URL 쿼리
 ```
+
+### Encodable 파라미터 사용
+
+타입 안전한 요청을 위해 `Encodable` 타입을 직접 사용할 수 있습니다:
+
+```swift
+// 쿼리 파라미터 (GET, DELETE)
+struct SearchQuery: Encodable {
+    let keyword: String
+    let page: Int
+    let limit: Int
+}
+
+let query = SearchQuery(keyword: "swift", page: 1, limit: 20)
+let results: ApiResponse<[Post]> = try await client.get("/posts", query: query)
+// → /posts?keyword=swift&page=1&limit=20
+
+// Request Body (POST, PUT, PATCH)
+struct CreateUserRequest: Encodable {
+    let name: String
+    let email: String
+}
+
+let request = CreateUserRequest(name: "Cha", email: "cha@example.com")
+let user: ApiResponse<User> = try await client.post("/users", body: request)
+```
+
+| 메서드 | Dictionary | Encodable |
+|--------|------------|-----------|
+| GET | `parameters:` | `query:` |
+| POST | `parameters:` | `body:` |
+| PUT | `parameters:` | `body:` |
+| PATCH | `parameters:` | `body:` |
+| DELETE | `parameters:` | `query:` |
+
+> **Note:** Encodable 파라미터는 `Sendable` 프로토콜도 준수해야 합니다. 일반적인 `struct`는 자동으로 `Sendable`을 준수하므로 대부분의 경우 추가 작업이 필요 없습니다.
 
 ## Bearer Token 인증
 

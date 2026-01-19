@@ -303,3 +303,220 @@ extension AuthenticatedClient where Self: NetworkClient {
         )
     }
 }
+
+// MARK: - Convenience Methods with Encodable (async/await)
+
+@available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
+extension AuthenticatedClient where Self: NetworkClient {
+
+    /// GET 요청 - Encodable 쿼리 파라미터
+    /// - Parameters:
+    ///   - path: API 경로 (예: "/users")
+    ///   - query: Encodable 쿼리 파라미터 (URL에 추가됨)
+    ///   - headers: 추가 헤더
+    ///   - decoder: JSON 디코더
+    public func get<T: Codable, Query: Encodable & Sendable>(
+        _ path: String,
+        query: Query,
+        headers: [String: String]? = nil,
+        decoder: JSONDecoder = JSONDecoder()
+    ) async throws -> ApiResponse<T> {
+        let fullURL = buildURL(path: path)
+        return try await responseData(
+            .get,
+            fullURL,
+            parameters: query,
+            encoder: URLEncodedFormParameterEncoder.default,
+            headers: headers,
+            decoder: decoder
+        )
+    }
+
+    /// POST 요청 - Encodable body
+    /// - Parameters:
+    ///   - path: API 경로
+    ///   - body: Encodable request body
+    ///   - headers: 추가 헤더
+    ///   - decoder: JSON 디코더
+    public func post<T: Codable, Body: Encodable & Sendable>(
+        _ path: String,
+        body: Body,
+        headers: [String: String]? = nil,
+        decoder: JSONDecoder = JSONDecoder()
+    ) async throws -> ApiResponse<T> {
+        let fullURL = buildURL(path: path)
+        return try await responseData(
+            .post,
+            fullURL,
+            parameters: body,
+            encoder: JSONParameterEncoder.default,
+            headers: headers,
+            decoder: decoder
+        )
+    }
+
+    /// PUT 요청 - Encodable body
+    /// - Parameters:
+    ///   - path: API 경로
+    ///   - body: Encodable request body
+    ///   - headers: 추가 헤더
+    ///   - decoder: JSON 디코더
+    public func put<T: Codable, Body: Encodable & Sendable>(
+        _ path: String,
+        body: Body,
+        headers: [String: String]? = nil,
+        decoder: JSONDecoder = JSONDecoder()
+    ) async throws -> ApiResponse<T> {
+        let fullURL = buildURL(path: path)
+        return try await responseData(
+            .put,
+            fullURL,
+            parameters: body,
+            encoder: JSONParameterEncoder.default,
+            headers: headers,
+            decoder: decoder
+        )
+    }
+
+    /// PATCH 요청 - Encodable body
+    /// - Parameters:
+    ///   - path: API 경로
+    ///   - body: Encodable request body
+    ///   - headers: 추가 헤더
+    ///   - decoder: JSON 디코더
+    public func patch<T: Codable, Body: Encodable & Sendable>(
+        _ path: String,
+        body: Body,
+        headers: [String: String]? = nil,
+        decoder: JSONDecoder = JSONDecoder()
+    ) async throws -> ApiResponse<T> {
+        let fullURL = buildURL(path: path)
+        return try await responseData(
+            .patch,
+            fullURL,
+            parameters: body,
+            encoder: JSONParameterEncoder.default,
+            headers: headers,
+            decoder: decoder
+        )
+    }
+
+    /// DELETE 요청 - Encodable 쿼리 파라미터
+    /// - Parameters:
+    ///   - path: API 경로
+    ///   - query: Encodable 쿼리 파라미터 (URL에 추가됨)
+    ///   - headers: 추가 헤더
+    ///   - decoder: JSON 디코더
+    public func delete<T: Codable, Query: Encodable & Sendable>(
+        _ path: String,
+        query: Query,
+        headers: [String: String]? = nil,
+        decoder: JSONDecoder = JSONDecoder()
+    ) async throws -> ApiResponse<T> {
+        let fullURL = buildURL(path: path)
+        return try await responseData(
+            .delete,
+            fullURL,
+            parameters: query,
+            encoder: URLEncodedFormParameterEncoder.default,
+            headers: headers,
+            decoder: decoder
+        )
+    }
+}
+
+// MARK: - Convenience Methods with Encodable (Combine)
+
+@available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
+extension AuthenticatedClient where Self: NetworkClient {
+
+    /// GET 요청 Publisher - Encodable 쿼리 파라미터
+    public func getPublisher<T: Codable, Query: Encodable & Sendable>(
+        _ path: String,
+        query: Query,
+        headers: [String: String]? = nil,
+        decoder: JSONDecoder = JSONDecoder()
+    ) -> AnyPublisher<ApiResponse<T>, Error> {
+        let fullURL = buildURL(path: path)
+        return responseDataPublisher(
+            .get,
+            fullURL,
+            parameters: query,
+            encoder: URLEncodedFormParameterEncoder.default,
+            headers: headers,
+            decoder: decoder
+        )
+    }
+
+    /// POST 요청 Publisher - Encodable body
+    public func postPublisher<T: Codable, Body: Encodable & Sendable>(
+        _ path: String,
+        body: Body,
+        headers: [String: String]? = nil,
+        decoder: JSONDecoder = JSONDecoder()
+    ) -> AnyPublisher<ApiResponse<T>, Error> {
+        let fullURL = buildURL(path: path)
+        return responseDataPublisher(
+            .post,
+            fullURL,
+            parameters: body,
+            encoder: JSONParameterEncoder.default,
+            headers: headers,
+            decoder: decoder
+        )
+    }
+
+    /// PUT 요청 Publisher - Encodable body
+    public func putPublisher<T: Codable, Body: Encodable & Sendable>(
+        _ path: String,
+        body: Body,
+        headers: [String: String]? = nil,
+        decoder: JSONDecoder = JSONDecoder()
+    ) -> AnyPublisher<ApiResponse<T>, Error> {
+        let fullURL = buildURL(path: path)
+        return responseDataPublisher(
+            .put,
+            fullURL,
+            parameters: body,
+            encoder: JSONParameterEncoder.default,
+            headers: headers,
+            decoder: decoder
+        )
+    }
+
+    /// PATCH 요청 Publisher - Encodable body
+    public func patchPublisher<T: Codable, Body: Encodable & Sendable>(
+        _ path: String,
+        body: Body,
+        headers: [String: String]? = nil,
+        decoder: JSONDecoder = JSONDecoder()
+    ) -> AnyPublisher<ApiResponse<T>, Error> {
+        let fullURL = buildURL(path: path)
+        return responseDataPublisher(
+            .patch,
+            fullURL,
+            parameters: body,
+            encoder: JSONParameterEncoder.default,
+            headers: headers,
+            decoder: decoder
+        )
+    }
+
+    /// DELETE 요청 Publisher - Encodable 쿼리 파라미터
+    public func deletePublisher<T: Codable, Query: Encodable & Sendable>(
+        _ path: String,
+        query: Query,
+        headers: [String: String]? = nil,
+        decoder: JSONDecoder = JSONDecoder()
+    ) -> AnyPublisher<ApiResponse<T>, Error> {
+        let fullURL = buildURL(path: path)
+        return responseDataPublisher(
+            .delete,
+            fullURL,
+            parameters: query,
+            encoder: URLEncodedFormParameterEncoder.default,
+            headers: headers,
+            decoder: decoder
+        )
+    }
+}
