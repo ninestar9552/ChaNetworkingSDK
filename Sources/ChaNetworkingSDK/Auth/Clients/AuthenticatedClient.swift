@@ -317,7 +317,7 @@ extension AuthenticatedClient where Self: NetworkClient {
     ///   - decoder: JSON 디코더
     public func get<T: Codable, Query: Encodable & Sendable>(
         _ path: String,
-        query: Query,
+        query: Query? = nil,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) async throws -> ApiResponse<T> {
@@ -340,7 +340,7 @@ extension AuthenticatedClient where Self: NetworkClient {
     ///   - decoder: JSON 디코더
     public func post<T: Codable, Body: Encodable & Sendable>(
         _ path: String,
-        body: Body,
+        body: Body? = nil,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) async throws -> ApiResponse<T> {
@@ -363,7 +363,7 @@ extension AuthenticatedClient where Self: NetworkClient {
     ///   - decoder: JSON 디코더
     public func put<T: Codable, Body: Encodable & Sendable>(
         _ path: String,
-        body: Body,
+        body: Body? = nil,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) async throws -> ApiResponse<T> {
@@ -386,7 +386,7 @@ extension AuthenticatedClient where Self: NetworkClient {
     ///   - decoder: JSON 디코더
     public func patch<T: Codable, Body: Encodable & Sendable>(
         _ path: String,
-        body: Body,
+        body: Body? = nil,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) async throws -> ApiResponse<T> {
@@ -409,7 +409,7 @@ extension AuthenticatedClient where Self: NetworkClient {
     ///   - decoder: JSON 디코더
     public func delete<T: Codable, Query: Encodable & Sendable>(
         _ path: String,
-        query: Query,
+        query: Query? = nil,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) async throws -> ApiResponse<T> {
@@ -433,7 +433,7 @@ extension AuthenticatedClient where Self: NetworkClient {
     /// GET 요청 Publisher - Encodable 쿼리 파라미터
     public func getPublisher<T: Codable, Query: Encodable & Sendable>(
         _ path: String,
-        query: Query,
+        query: Query? = nil,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) -> AnyPublisher<ApiResponse<T>, Error> {
@@ -451,7 +451,7 @@ extension AuthenticatedClient where Self: NetworkClient {
     /// POST 요청 Publisher - Encodable body
     public func postPublisher<T: Codable, Body: Encodable & Sendable>(
         _ path: String,
-        body: Body,
+        body: Body? = nil,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) -> AnyPublisher<ApiResponse<T>, Error> {
@@ -469,7 +469,7 @@ extension AuthenticatedClient where Self: NetworkClient {
     /// PUT 요청 Publisher - Encodable body
     public func putPublisher<T: Codable, Body: Encodable & Sendable>(
         _ path: String,
-        body: Body,
+        body: Body? = nil,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) -> AnyPublisher<ApiResponse<T>, Error> {
@@ -487,7 +487,7 @@ extension AuthenticatedClient where Self: NetworkClient {
     /// PATCH 요청 Publisher - Encodable body
     public func patchPublisher<T: Codable, Body: Encodable & Sendable>(
         _ path: String,
-        body: Body,
+        body: Body? = nil,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) -> AnyPublisher<ApiResponse<T>, Error> {
@@ -505,7 +505,7 @@ extension AuthenticatedClient where Self: NetworkClient {
     /// DELETE 요청 Publisher - Encodable 쿼리 파라미터
     public func deletePublisher<T: Codable, Query: Encodable & Sendable>(
         _ path: String,
-        query: Query,
+        query: Query? = nil,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) -> AnyPublisher<ApiResponse<T>, Error> {

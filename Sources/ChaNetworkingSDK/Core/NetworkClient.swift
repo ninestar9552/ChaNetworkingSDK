@@ -75,7 +75,7 @@ extension NetworkClient {
     public func responseData<T: Codable, P: Encodable & Sendable>(
         _ httpMethod: Alamofire.HTTPMethod,
         _ url: String,
-        parameters: P,
+        parameters: P?,
         encoder: ParameterEncoder,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
@@ -155,7 +155,7 @@ extension NetworkClient {
     public func responseDataPublisher<T: Codable, P: Encodable & Sendable>(
         _ httpMethod: Alamofire.HTTPMethod,
         _ url: String,
-        parameters: P,
+        parameters: P?,
         encoder: ParameterEncoder,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
