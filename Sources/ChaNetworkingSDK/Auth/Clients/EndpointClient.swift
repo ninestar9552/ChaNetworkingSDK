@@ -29,8 +29,11 @@ extension EndpointClient {
         if path.starts(with: "http://") || path.starts(with: "https://") {
             return path
         }
+        // baseURL의 trailing slash와 path의 leading slash가 중복되는 케이스 방지
+        // "https://api.example.com/" + "/users" → "https://api.example.com/users"
+        let base = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
         let cleanPath = path.hasPrefix("/") ? path : "/\(path)"
-        return baseURL + cleanPath
+        return base + cleanPath
     }
 }
 

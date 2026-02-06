@@ -26,8 +26,5 @@ import Foundation
 public struct EmptyResponse: Codable, Equatable {
     /// 빈 응답 초기화
     public init() {}
-
-    public static func == (lhs: EmptyResponse, rhs: EmptyResponse) -> Bool {
-        return true  // 모든 EmptyResponse는 동일
-    }
+    // 프로퍼티가 없는 struct는 Swift가 Equatable을 자동 합성합니다.
 }

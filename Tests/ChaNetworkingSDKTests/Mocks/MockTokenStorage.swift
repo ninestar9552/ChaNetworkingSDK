@@ -15,14 +15,14 @@ final class MockTokenStorage: TokenStorage, @unchecked Sendable {
     private var _refreshToken: String?
 
     func saveAccessToken(_ token: String) throws {
-        queue.sync(flags: .barrier) { [weak self] in
-            self?._accessToken = token
+        queue.sync(flags: .barrier) {
+            self._accessToken = token
         }
     }
 
     func saveRefreshToken(_ token: String) throws {
-        queue.sync(flags: .barrier) { [weak self] in
-            self?._refreshToken = token
+        queue.sync(flags: .barrier) {
+            self._refreshToken = token
         }
     }
 
@@ -39,9 +39,9 @@ final class MockTokenStorage: TokenStorage, @unchecked Sendable {
     }
 
     func clearTokens() throws {
-        queue.sync(flags: .barrier) { [weak self] in
-            self?._accessToken = nil
-            self?._refreshToken = nil
+        queue.sync(flags: .barrier) {
+            self._accessToken = nil
+            self._refreshToken = nil
         }
     }
 }
