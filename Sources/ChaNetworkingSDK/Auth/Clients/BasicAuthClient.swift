@@ -29,7 +29,7 @@ open class BasicAuthClient: NetworkClient, EndpointClient {
         configuration: URLSessionConfiguration = .default,
         username: String,
         password: String,
-        encoding: ParameterEncoding = JSONEncoding(options: .prettyPrinted),
+        encoding: ParameterEncoding = JSONEncoding.default,
         errorHandler: NetworkErrorHandler = DefaultNetworkErrorHandler(),
         logging: Bool = false
     ) {

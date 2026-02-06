@@ -23,7 +23,7 @@ open class NetworkClient {
 
     public init(
         session: Session,
-        encoding: ParameterEncoding = JSONEncoding(options: .prettyPrinted),
+        encoding: ParameterEncoding = JSONEncoding.default,
         errorHandler: NetworkErrorHandler = DefaultNetworkErrorHandler(),
         logging: Bool = false
     ) {
@@ -37,9 +37,13 @@ open class NetworkClient {
 @available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
 extension NetworkClient {
     /// API 요청을 수행하고 디코딩된 모델을 반환합니다. (Swift Concurrency 버전)
+    ///
+    /// - Note: 제네릭 제약을 `Codable`이 아닌 `Decodable`로 지정하여,
+    ///   응답 전용 모델에 불필요한 `Encodable` 채택을 강제하지 않습니다.
+    ///
     /// - Returns:
     ///   `ApiResponse<T>` (값 + 원본 Data + HTTPURLResponse 제공)
-    public func responseData<T: Codable>(
+    public func responseData<T: Decodable>(
         _ httpMethod: Alamofire.HTTPMethod,
         _ url: String,
         parameters: Parameters? = nil,
@@ -49,7 +53,8 @@ extension NetworkClient {
     ) async throws -> ApiResponse<T> {
 
         var httpHeaders = HTTPHeaders(headers ?? [:])
-        httpHeaders.update(.contentType("application/json"))
+        // Content-Type은 Alamofire의 인코딩 전략(JSONEncoding, URLEncoding 등)이
+        // 자동으로 설정하므로 여기서는 Accept만 지정합니다.
         httpHeaders.update(.accept("application/json"))
 
         let dataRequest: DataRequest = self.session.request(
@@ -72,7 +77,7 @@ extension NetworkClient {
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
     /// - Returns: `ApiResponse<T>`
-    public func responseData<T: Codable, P: Encodable & Sendable>(
+    public func responseData<T: Decodable, P: Encodable & Sendable>(
         _ httpMethod: Alamofire.HTTPMethod,
         _ url: String,
         parameters: P?,
@@ -82,7 +87,6 @@ extension NetworkClient {
     ) async throws -> ApiResponse<T> {
 
         var httpHeaders = HTTPHeaders(headers ?? [:])
-        httpHeaders.update(.contentType("application/json"))
         httpHeaders.update(.accept("application/json"))
 
         let dataRequest: DataRequest = self.session.request(
@@ -119,7 +123,7 @@ extension NetworkClient {
     ///     })
     /// ```
     @available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
-    public func responseDataPublisher<T: Codable>(
+    public func responseDataPublisher<T: Decodable>(
         _ httpMethod: Alamofire.HTTPMethod,
         _ url: String,
         parameters: Parameters? = nil,
@@ -129,8 +133,7 @@ extension NetworkClient {
     )-> AnyPublisher<ApiResponse<T>, Error> {
 
         var httpHeaders = HTTPHeaders(headers ?? [:])
-        httpHeaders.update(HTTPHeader.contentType("application/json"))
-        httpHeaders.update(HTTPHeader.accept("application/json"))
+        httpHeaders.update(.accept("application/json"))
 
         let dataRequest: DataRequest = self.session.request(
             url,
@@ -152,7 +155,7 @@ extension NetworkClient {
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
     /// - Returns: `AnyPublisher<ApiResponse<T>, Error>`
-    public func responseDataPublisher<T: Codable, P: Encodable & Sendable>(
+    public func responseDataPublisher<T: Decodable, P: Encodable & Sendable>(
         _ httpMethod: Alamofire.HTTPMethod,
         _ url: String,
         parameters: P?,
@@ -162,8 +165,7 @@ extension NetworkClient {
     ) -> AnyPublisher<ApiResponse<T>, Error> {
 
         var httpHeaders = HTTPHeaders(headers ?? [:])
-        httpHeaders.update(HTTPHeader.contentType("application/json"))
-        httpHeaders.update(HTTPHeader.accept("application/json"))
+        httpHeaders.update(.accept("application/json"))
 
         let dataRequest: DataRequest = self.session.request(
             url,

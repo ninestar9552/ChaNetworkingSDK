@@ -47,7 +47,7 @@ extension EndpointClient where Self: NetworkClient {
     ///   - encoding: 파라미터 인코딩 (기본값: 클라이언트 설정)
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
-    public func request<T: Codable>(
+    public func request<T: Decodable>(
         _ httpMethod: Alamofire.HTTPMethod,
         _ path: String,
         parameters: Parameters? = nil,
@@ -67,7 +67,7 @@ extension EndpointClient where Self: NetworkClient {
     }
 
     /// API 요청 (Combine) - 상대 경로 자동 결합
-    public func requestPublisher<T: Codable>(
+    public func requestPublisher<T: Decodable>(
         _ httpMethod: Alamofire.HTTPMethod,
         _ path: String,
         parameters: Parameters? = nil,
@@ -98,7 +98,7 @@ extension EndpointClient where Self: NetworkClient {
     ///   - parameters: Query parameters (URL에 추가됨)
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
-    public func get<T: Codable>(
+    public func get<T: Decodable>(
         _ path: String,
         parameters: Parameters? = nil,
         headers: [String: String]? = nil,
@@ -121,7 +121,7 @@ extension EndpointClient where Self: NetworkClient {
     ///   - encoding: 파라미터 인코딩 (기본: JSON)
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
-    public func post<T: Codable>(
+    public func post<T: Decodable>(
         _ path: String,
         parameters: Parameters? = nil,
         encoding: ParameterEncoding = JSONEncoding.default,
@@ -145,7 +145,7 @@ extension EndpointClient where Self: NetworkClient {
     ///   - encoding: 파라미터 인코딩 (기본: JSON)
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
-    public func put<T: Codable>(
+    public func put<T: Decodable>(
         _ path: String,
         parameters: Parameters? = nil,
         encoding: ParameterEncoding = JSONEncoding.default,
@@ -169,7 +169,7 @@ extension EndpointClient where Self: NetworkClient {
     ///   - encoding: 파라미터 인코딩 (기본: JSON)
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
-    public func patch<T: Codable>(
+    public func patch<T: Decodable>(
         _ path: String,
         parameters: Parameters? = nil,
         encoding: ParameterEncoding = JSONEncoding.default,
@@ -192,7 +192,7 @@ extension EndpointClient where Self: NetworkClient {
     ///   - parameters: Query parameters (선택)
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
-    public func delete<T: Codable>(
+    public func delete<T: Decodable>(
         _ path: String,
         parameters: Parameters? = nil,
         headers: [String: String]? = nil,
@@ -215,7 +215,7 @@ extension EndpointClient where Self: NetworkClient {
 extension EndpointClient where Self: NetworkClient {
 
     /// GET 요청 Publisher - 리소스 조회
-    public func getPublisher<T: Codable>(
+    public func getPublisher<T: Decodable>(
         _ path: String,
         parameters: Parameters? = nil,
         headers: [String: String]? = nil,
@@ -232,7 +232,7 @@ extension EndpointClient where Self: NetworkClient {
     }
 
     /// POST 요청 Publisher - 리소스 생성
-    public func postPublisher<T: Codable>(
+    public func postPublisher<T: Decodable>(
         _ path: String,
         parameters: Parameters? = nil,
         encoding: ParameterEncoding = JSONEncoding.default,
@@ -250,7 +250,7 @@ extension EndpointClient where Self: NetworkClient {
     }
 
     /// PUT 요청 Publisher - 리소스 전체 수정
-    public func putPublisher<T: Codable>(
+    public func putPublisher<T: Decodable>(
         _ path: String,
         parameters: Parameters? = nil,
         encoding: ParameterEncoding = JSONEncoding.default,
@@ -268,7 +268,7 @@ extension EndpointClient where Self: NetworkClient {
     }
 
     /// PATCH 요청 Publisher - 리소스 부분 수정
-    public func patchPublisher<T: Codable>(
+    public func patchPublisher<T: Decodable>(
         _ path: String,
         parameters: Parameters? = nil,
         encoding: ParameterEncoding = JSONEncoding.default,
@@ -286,7 +286,7 @@ extension EndpointClient where Self: NetworkClient {
     }
 
     /// DELETE 요청 Publisher - 리소스 삭제
-    public func deletePublisher<T: Codable>(
+    public func deletePublisher<T: Decodable>(
         _ path: String,
         parameters: Parameters? = nil,
         headers: [String: String]? = nil,
@@ -314,7 +314,7 @@ extension EndpointClient where Self: NetworkClient {
     ///   - query: Encodable 쿼리 파라미터 (URL에 추가됨)
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
-    public func get<T: Codable, Query: Encodable & Sendable>(
+    public func get<T: Decodable, Query: Encodable & Sendable>(
         _ path: String,
         query: Query? = nil,
         headers: [String: String]? = nil,
@@ -337,7 +337,7 @@ extension EndpointClient where Self: NetworkClient {
     ///   - body: Encodable request body
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
-    public func post<T: Codable, Body: Encodable & Sendable>(
+    public func post<T: Decodable, Body: Encodable & Sendable>(
         _ path: String,
         body: Body? = nil,
         headers: [String: String]? = nil,
@@ -360,7 +360,7 @@ extension EndpointClient where Self: NetworkClient {
     ///   - body: Encodable request body
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
-    public func put<T: Codable, Body: Encodable & Sendable>(
+    public func put<T: Decodable, Body: Encodable & Sendable>(
         _ path: String,
         body: Body? = nil,
         headers: [String: String]? = nil,
@@ -383,7 +383,7 @@ extension EndpointClient where Self: NetworkClient {
     ///   - body: Encodable request body
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
-    public func patch<T: Codable, Body: Encodable & Sendable>(
+    public func patch<T: Decodable, Body: Encodable & Sendable>(
         _ path: String,
         body: Body? = nil,
         headers: [String: String]? = nil,
@@ -406,7 +406,7 @@ extension EndpointClient where Self: NetworkClient {
     ///   - query: Encodable 쿼리 파라미터 (URL에 추가됨)
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
-    public func delete<T: Codable, Query: Encodable & Sendable>(
+    public func delete<T: Decodable, Query: Encodable & Sendable>(
         _ path: String,
         query: Query? = nil,
         headers: [String: String]? = nil,
@@ -430,7 +430,7 @@ extension EndpointClient where Self: NetworkClient {
 extension EndpointClient where Self: NetworkClient {
 
     /// GET 요청 Publisher - Encodable 쿼리 파라미터
-    public func getPublisher<T: Codable, Query: Encodable & Sendable>(
+    public func getPublisher<T: Decodable, Query: Encodable & Sendable>(
         _ path: String,
         query: Query? = nil,
         headers: [String: String]? = nil,
@@ -448,7 +448,7 @@ extension EndpointClient where Self: NetworkClient {
     }
 
     /// POST 요청 Publisher - Encodable body
-    public func postPublisher<T: Codable, Body: Encodable & Sendable>(
+    public func postPublisher<T: Decodable, Body: Encodable & Sendable>(
         _ path: String,
         body: Body? = nil,
         headers: [String: String]? = nil,
@@ -466,7 +466,7 @@ extension EndpointClient where Self: NetworkClient {
     }
 
     /// PUT 요청 Publisher - Encodable body
-    public func putPublisher<T: Codable, Body: Encodable & Sendable>(
+    public func putPublisher<T: Decodable, Body: Encodable & Sendable>(
         _ path: String,
         body: Body? = nil,
         headers: [String: String]? = nil,
@@ -484,7 +484,7 @@ extension EndpointClient where Self: NetworkClient {
     }
 
     /// PATCH 요청 Publisher - Encodable body
-    public func patchPublisher<T: Codable, Body: Encodable & Sendable>(
+    public func patchPublisher<T: Decodable, Body: Encodable & Sendable>(
         _ path: String,
         body: Body? = nil,
         headers: [String: String]? = nil,
@@ -502,7 +502,7 @@ extension EndpointClient where Self: NetworkClient {
     }
 
     /// DELETE 요청 Publisher - Encodable 쿼리 파라미터
-    public func deletePublisher<T: Codable, Query: Encodable & Sendable>(
+    public func deletePublisher<T: Decodable, Query: Encodable & Sendable>(
         _ path: String,
         query: Query? = nil,
         headers: [String: String]? = nil,

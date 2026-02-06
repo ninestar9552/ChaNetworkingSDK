@@ -31,7 +31,7 @@ open class BearerTokenClient: NetworkClient, EndpointClient {
         configuration: URLSessionConfiguration = .default,
         tokenStorage: TokenStorage = KeychainTokenStorage(),
         tokenRefresher: @escaping TokenRefreshHandler,
-        encoding: ParameterEncoding = JSONEncoding(options: .prettyPrinted),
+        encoding: ParameterEncoding = JSONEncoding.default,
         errorHandler: NetworkErrorHandler = DefaultNetworkErrorHandler(),
         logging: Bool = false
     ) {

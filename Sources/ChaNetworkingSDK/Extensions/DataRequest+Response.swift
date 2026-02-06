@@ -10,7 +10,7 @@ import Alamofire
 import Combine
 
 extension DataRequest {
-    internal func processResponse<T: Codable>(
+    internal func processResponse<T: Decodable>(
         _ dataResponse: DataResponse<Data, AFError>,
         decoder: JSONDecoder,
         errorHandler: NetworkErrorHandler
@@ -54,7 +54,7 @@ extension DataRequest {
     ///   ErrorHandler가 커스텀된 경우 `transform()`에서 nil을 반환할 수 있으므로
     ///   아래에서 `response` / `data` 유효성 검사를 **한 번 더 수행**합니다.
     @available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
-    internal func serializedResponse<T: Codable>(
+    internal func serializedResponse<T: Decodable>(
         using client: NetworkClient,
         decoder: JSONDecoder
     ) async throws -> ApiResponse<T> {
@@ -73,13 +73,16 @@ extension DataRequest {
     ///   2. ErrorHandler를 통한 오류 변환
     ///   3. response/data nil-safe 검사 (Fail-fast 보장)
     ///   4. JSON 디코딩
-    ///   5. 메인 스레드에서 응답 전달
+    ///
+    /// - Note: `.receive(on:)`를 사용하지 않아 스레드 선택을 호출자에게 위임합니다.
+    ///   SDK가 메인 스레드를 강제하면, 호출자가 백그라운드에서 후처리(이미지 변환 등)를
+    ///   하고 싶을 때 불필요한 스레드 전환이 발생합니다.
     ///
     /// - 주의:
     ///   ErrorHandler가 커스텀된 경우 `transform()`에서 nil을 반환할 수 있으므로
     ///   아래에서 `response` / `data` 유효성 검사를 **한 번 더 수행**합니다.
     @available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
-    internal func publish<T: Codable>(
+    internal func publish<T: Decodable>(
         using client: NetworkClient,
         decoder: JSONDecoder
     ) -> AnyPublisher<ApiResponse<T>, Error> {
@@ -91,7 +94,6 @@ extension DataRequest {
 
                 return try self.processResponse(dataResponse, decoder: decoder, errorHandler: client.errorHandler)
             }
-            .receive(on: DispatchQueue.main)
             .eraseToAnyPublisher()
     }
 }

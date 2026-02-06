@@ -18,3 +18,9 @@ public struct ApiResponse<Value> {
     public let data: Data
     public let httpResponse: HTTPURLResponse
 }
+
+// MARK: - Sendable
+/// Value가 Sendable을 채택한 경우에만 ApiResponse도 Sendable이 됩니다. (조건부 채택)
+/// 이를 통해 Swift Concurrency 환경(Task, Actor 간)에서 안전하게 전달할 수 있습니다.
+/// Data와 HTTPURLResponse는 이미 Sendable이므로, Value만 Sendable이면 전체가 안전합니다.
+extension ApiResponse: Sendable where Value: Sendable {}
