@@ -140,14 +140,14 @@ final class BasicAuthClientTests {
 
         do {
             let _: ApiResponse<MockUser> = try await client.get("/users/me")
-            #expect(false, "Expected error was not thrown")
+            Issue.record("Expected error was not thrown")
         } catch let error as NetworkError {
             switch error {
             case .serverError(let code, let message):
                 #expect(code == 401)
                 #expect(message == #"{"error":"Invalid credentials"}"#)
             default:
-                #expect(false, "Unexpected error type: \(error)")
+                Issue.record("Unexpected error type: \(error)")
             }
         }
     }
@@ -170,14 +170,14 @@ final class BasicAuthClientTests {
 
         do {
             let _: ApiResponse<MockUser> = try await client.get("/users/999")
-            #expect(false, "Expected error was not thrown")
+            Issue.record("Expected error was not thrown")
         } catch let error as NetworkError {
             switch error {
             case .serverError(let code, let message):
                 #expect(code == 404)
                 #expect(message == #"{"error":"Not Found"}"#)
             default:
-                #expect(false, "Unexpected error type: \(error)")
+                Issue.record("Unexpected error type: \(error)")
             }
         }
     }

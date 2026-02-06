@@ -147,7 +147,7 @@ final class BearerTokenClientTests {
         // When: API 호출
         do {
             let _: ApiResponse<MockUser> = try await client.get("/users/me")
-            #expect(false, "Expected error was not thrown")
+            Issue.record("Expected error was not thrown")
         } catch {
             // Then: 최대 2번 시도 (원래 요청 1번 + 재시도 1번)
             #expect(requestCount == 2)
@@ -240,14 +240,14 @@ final class BearerTokenClientTests {
 
         do {
             let _: ApiResponse<MockUser> = try await client.get("/users/999")
-            #expect(false, "Expected error was not thrown")
+            Issue.record("Expected error was not thrown")
         } catch let error as NetworkError {
             switch error {
             case .serverError(let code, let message):
                 #expect(code == 404)
                 #expect(message == #"{"error":"Not Found"}"#)
             default:
-                #expect(false, "Unexpected error type: \(error)")
+                Issue.record("Unexpected error type: \(error)")
             }
         }
     }

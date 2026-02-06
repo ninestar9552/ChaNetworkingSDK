@@ -82,11 +82,8 @@ final class EmptyResponseTests {
         let emptyJSON = "{}".data(using: .utf8)!
         let decoder = JSONDecoder()
 
-        // When
-        let decoded = try decoder.decode(ChaNetworkingSDK.EmptyResponse.self, from: emptyJSON)
-
-        // Then: 디코딩 성공
-        #expect(decoded != nil)
+        // When & Then: try가 throw 없이 성공하면 디코딩 성공
+        _ = try decoder.decode(ChaNetworkingSDK.EmptyResponse.self, from: emptyJSON)
     }
 
     @Test func testEmptyResponseEquality() {

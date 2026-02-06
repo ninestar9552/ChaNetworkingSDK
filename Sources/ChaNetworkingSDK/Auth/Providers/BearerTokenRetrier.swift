@@ -33,6 +33,16 @@ public typealias TokenRefreshHandler = (
     _ completion: @escaping (Result<(accessToken: String, refreshToken: String), Error>) -> Void
 ) -> Void
 
+/// non-Sendable 값을 @Sendable 클로저에서 안전하게 전달하기 위한 래퍼
+///
+/// `DispatchQueue.async`는 `@Sendable` 클로저를 요구하지만,
+/// Alamofire의 `RequestRetrier` 프로토콜이 제공하는 `completion`과 `error`는
+/// `Sendable`을 채택하지 않습니다.
+/// 직렬 큐(serial queue)를 통해 동기화가 보장되므로 `@unchecked Sendable`로 안전하게 래핑합니다.
+private struct UncheckedSendableBox<T>: @unchecked Sendable {
+    let value: T
+}
+
 /// 401 Unauthorized 에러 발생 시 Token을 자동으로 갱신하고 재시도하는 Retrier
 /// - 401 에러 발생 시 Refresh Token으로 갱신 후 1번 재시도
 /// - 여러 요청이 동시에 401을 받아도 토큰 갱신은 1번만 실행
@@ -71,11 +81,17 @@ public final class BearerTokenRetrier: RequestRetrier, @unchecked Sendable {
             return
         }
 
+        // Alamofire의 RequestRetrier 프로토콜이 제공하는 completion과 error는
+        // Sendable을 채택하지 않으므로 @Sendable 클로저(queue.async)에 직접 캡처할 수 없습니다.
+        // 직렬 큐로 동기화가 보장되므로 UncheckedSendableBox로 안전하게 래핑합니다.
+        let sendableCompletion = UncheckedSendableBox(value: completion)
+        let sendableError = UncheckedSendableBox(value: error)
+
         queue.async { [weak self] in
             guard let self = self else { return }
 
             // 이미 refresh 중이면 큐에 추가
-            self.requestsToRetry.append(completion)
+            self.requestsToRetry.append(sendableCompletion.value)
 
             guard !self.isRefreshing else {
                 return
@@ -102,7 +118,7 @@ public final class BearerTokenRetrier: RequestRetrier, @unchecked Sendable {
                         retriers.forEach { $0(.retry) }
                     } else {
                         // 실패: 모든 요청 실패 처리
-                        retriers.forEach { $0(.doNotRetryWithError(error)) }
+                        retriers.forEach { $0(.doNotRetryWithError(sendableError.value)) }
                     }
                 }
             }

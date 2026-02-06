@@ -66,14 +66,14 @@ final class NetworkClientTests {
 
         do {
             let _: ApiResponse<MockUser> = try await client.responseData(.get, "/users")
-            #expect(false, "Expected error was not thrown")
+            Issue.record("Expected error was not thrown")
         } catch let error as NetworkError {
             switch error {
             case .serverError(let code, let message):
                 #expect(code == 401)
                 #expect(message == "{\"error\":\"Unauthorized\"}")
             default:
-                #expect(false, "Unexpected error type: \(error)")
+                Issue.record("Unexpected error type: \(error)")
             }
         }
     }
@@ -93,16 +93,12 @@ final class NetworkClientTests {
             return (response, mockJSON)
         }
 
-        let publisher: AnyPublisher<ApiResponse<MockUser>, Error> = try client.responseDataPublisher(.get, "/users")
+        let publisher: AnyPublisher<ApiResponse<MockUser>, Error> = client.responseDataPublisher(.get, "/users")
 
-        do {
-            for try await response in publisher.values {
-                #expect(response.value == MockUser(id: 1, name: "Soo"))
-                #expect(response.data == mockJSON)
-                #expect(response.httpResponse.statusCode == 200)
-            }
-        } catch {
-            #expect(false, "Unexpected error type: \(error)")
+        for try await response in publisher.values {
+            #expect(response.value == MockUser(id: 1, name: "Soo"))
+            #expect(response.data == mockJSON)
+            #expect(response.httpResponse.statusCode == 200)
         }
     }
 
@@ -121,23 +117,19 @@ final class NetworkClientTests {
             return (response, mockJSON)
         }
 
-        let publisher: AnyPublisher<ApiResponse<MockUser>, Error> = try client.responseDataPublisher(.get, "/users")
+        let publisher: AnyPublisher<ApiResponse<MockUser>, Error> = client.responseDataPublisher(.get, "/users")
 
         do {
             for try await _ in publisher.values {
-                #expect(false, "Expected error was not thrown")
+                Issue.record("Expected error was not thrown")
             }
-        } catch {
-            if let error = error as? NetworkError {
-                switch error {
-                case .serverError(let code, let message):
-                    #expect(code == 401)
-                    #expect(message == "{\"error\":\"Unauthorized\"}")
-                default:
-                    #expect(false, "Unexpected error type: \(error)")
-                }
-            } else {
-                #expect(false, "Unexpected error type: \(error)")
+        } catch let error as NetworkError {
+            switch error {
+            case .serverError(let code, let message):
+                #expect(code == 401)
+                #expect(message == "{\"error\":\"Unauthorized\"}")
+            default:
+                Issue.record("Unexpected error type: \(error)")
             }
         }
     }
