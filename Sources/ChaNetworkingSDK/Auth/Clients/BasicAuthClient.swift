@@ -12,7 +12,7 @@ import Combine
 /// Basic Authentication을 사용하는 Network Client
 /// - 자동으로 모든 요청에 Basic Auth 헤더 추가
 @available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
-open class BasicAuthClient: NetworkClient, AuthenticatedClient {
+open class BasicAuthClient: NetworkClient, EndpointClient {
     public let baseURL: String
 
     /// BasicAuthClient 초기화

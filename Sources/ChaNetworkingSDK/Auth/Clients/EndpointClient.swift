@@ -1,5 +1,5 @@
 //
-//  AuthenticatedClient.swift
+//  EndpointClient.swift
 //  ChaNetworkingSDK
 //
 //  Created by cha on 11/17/25.
@@ -11,10 +11,9 @@ import Combine
 
 // MARK: - Protocol 정의
 
-/// 인증이 필요한 API 클라이언트를 위한 프로토콜
-/// baseURL을 기반으로 상대 경로 요청을 지원합니다.
+/// baseURL을 기반으로 상대 경로 요청을 지원하는 클라이언트 프로토콜
 @available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
-public protocol AuthenticatedClient: AnyObject {
+public protocol EndpointClient: AnyObject {
     /// API Base URL (예: "https://api.example.com")
     var baseURL: String { get }
 }
@@ -22,7 +21,7 @@ public protocol AuthenticatedClient: AnyObject {
 // MARK: - URL Building
 
 @available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
-extension AuthenticatedClient {
+extension EndpointClient {
     /// 상대 경로를 전체 URL로 변환
     /// - Parameter path: API 경로 (예: "/users/me" 또는 전체 URL)
     /// - Returns: 전체 URL 문자열
@@ -38,7 +37,7 @@ extension AuthenticatedClient {
 // MARK: - Core Request Methods (NetworkClient 상속 시)
 
 @available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
-extension AuthenticatedClient where Self: NetworkClient {
+extension EndpointClient where Self: NetworkClient {
 
     /// API 요청 (async/await) - 상대 경로 자동 결합
     /// - Parameters:
@@ -91,7 +90,7 @@ extension AuthenticatedClient where Self: NetworkClient {
 // MARK: - Convenience Methods (async/await)
 
 @available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
-extension AuthenticatedClient where Self: NetworkClient {
+extension EndpointClient where Self: NetworkClient {
 
     /// GET 요청 - 리소스 조회
     /// - Parameters:
@@ -213,7 +212,7 @@ extension AuthenticatedClient where Self: NetworkClient {
 // MARK: - Convenience Methods (Combine)
 
 @available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
-extension AuthenticatedClient where Self: NetworkClient {
+extension EndpointClient where Self: NetworkClient {
 
     /// GET 요청 Publisher - 리소스 조회
     public func getPublisher<T: Codable>(
@@ -307,7 +306,7 @@ extension AuthenticatedClient where Self: NetworkClient {
 // MARK: - Convenience Methods with Encodable (async/await)
 
 @available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
-extension AuthenticatedClient where Self: NetworkClient {
+extension EndpointClient where Self: NetworkClient {
 
     /// GET 요청 - Encodable 쿼리 파라미터
     /// - Parameters:
@@ -428,7 +427,7 @@ extension AuthenticatedClient where Self: NetworkClient {
 // MARK: - Convenience Methods with Encodable (Combine)
 
 @available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
-extension AuthenticatedClient where Self: NetworkClient {
+extension EndpointClient where Self: NetworkClient {
 
     /// GET 요청 Publisher - Encodable 쿼리 파라미터
     public func getPublisher<T: Codable, Query: Encodable & Sendable>(

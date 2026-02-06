@@ -13,7 +13,7 @@ import Combine
 /// - 자동으로 모든 요청에 Bearer Token 추가
 /// - 401 에러 발생 시 자동으로 Token 갱신 후 1번 재시도
 @available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
-open class BearerTokenClient: NetworkClient, AuthenticatedClient {
+open class BearerTokenClient: NetworkClient, EndpointClient {
     public let baseURL: String
     public let tokenStorage: TokenStorage
 

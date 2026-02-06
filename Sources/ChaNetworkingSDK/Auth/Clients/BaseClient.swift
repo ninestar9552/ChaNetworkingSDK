@@ -13,7 +13,7 @@ import Combine
 /// - 상대 경로로 API 호출 가능
 /// - 인증이 필요 없는 공개 API에 적합
 @available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
-open class BaseClient: NetworkClient, AuthenticatedClient {
+open class BaseClient: NetworkClient, EndpointClient {
     public let baseURL: String
 
     /// BaseClient 초기화
