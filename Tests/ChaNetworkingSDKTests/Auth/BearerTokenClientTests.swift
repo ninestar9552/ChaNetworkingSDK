@@ -22,7 +22,7 @@ final class BearerTokenClientTests {
         // Token refresher mock
         let tokenRefresher: TokenRefreshHandler = { refreshToken, completion in
             // Mock: 새 토큰 발급
-            completion(.success((
+            completion(.success(TokenPair(
                 accessToken: "new_access_token",
                 refreshToken: "new_refresh_token"
             )))

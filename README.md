@@ -32,7 +32,7 @@ Swift로 작성된 간결하고 강력한 네트워킹 SDK입니다. Alamofire�
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/ninestar9552/ChaNetworkingSDK.git", from: "1.0.0")
+    .package(url: "https://github.com/ninestar9552/ChaNetworkingSDK.git", from: "2.0.0")
 ]
 ```
 
@@ -213,7 +213,7 @@ let tokenRefresher: TokenRefreshHandler = { currentRefreshToken, completion in
     .responseDecodable(of: TokenResponse.self) { response in
         switch response.result {
         case .success(let tokenResponse):
-            completion(.success((
+            completion(.success(TokenPair(
                 accessToken: tokenResponse.accessToken,
                 refreshToken: tokenResponse.refreshToken
             )))

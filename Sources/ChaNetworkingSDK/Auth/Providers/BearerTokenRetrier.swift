@@ -18,7 +18,7 @@ import Alamofire
 ///     apiClient.post("/auth/refresh", body: ["refreshToken": currentRefreshToken]) { result in
 ///         switch result {
 ///         case .success(let response):
-///             completion(.success((
+///             completion(.success(TokenPair(
 ///                 accessToken: response.accessToken,
 ///                 refreshToken: response.refreshToken
 ///             )))
@@ -30,7 +30,7 @@ import Alamofire
 /// ```
 public typealias TokenRefreshHandler = (
     _ currentRefreshToken: String,
-    _ completion: @escaping (Result<(accessToken: String, refreshToken: String), Error>) -> Void
+    _ completion: @escaping (Result<TokenPair, Error>) -> Void
 ) -> Void
 
 /// non-Sendable 값을 @Sendable 클로저에서 안전하게 전달하기 위한 래퍼
