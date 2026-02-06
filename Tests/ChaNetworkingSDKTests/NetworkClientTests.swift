@@ -6,7 +6,6 @@
 //
 
 import Testing
-import XCTest
 import Foundation
 import Alamofire
 import Combine
@@ -14,8 +13,6 @@ import Combine
 
 // MARK: - NetworkClient Tests
 final class NetworkClientTests {
-    
-    var cancellables = Set<AnyCancellable>()
     
     func createTestClient() -> (client: NetworkClient, key: String) {
         let key = UUID().uuidString

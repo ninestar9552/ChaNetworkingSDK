@@ -6,10 +6,8 @@
 //
 
 import Testing
-import XCTest
 import Foundation
 import Alamofire
-import Combine
 @testable import ChaNetworkingSDK
 
 // MARK: - BearerTokenClient Tests

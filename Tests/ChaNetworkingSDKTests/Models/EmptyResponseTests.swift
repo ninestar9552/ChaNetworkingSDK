@@ -6,7 +6,6 @@
 //
 
 import Testing
-import XCTest
 import Foundation
 import Alamofire
 @testable import ChaNetworkingSDK
