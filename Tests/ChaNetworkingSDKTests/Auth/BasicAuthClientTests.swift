@@ -64,6 +64,34 @@ final class BasicAuthClientTests {
         #expect(response.httpResponse.statusCode == 200)
     }
 
+    // MARK: - Value-Only with Auth Test
+    @Test func testValueOnlyWithBasicAuth() async throws {
+        // Given: 클라이언트 생성
+        let (client, key) = createTestClient()
+
+        var capturedAuthHeader: String?
+        let mockJSON = #"{"id":1,"name":"Test User"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            capturedAuthHeader = request.value(forHTTPHeaderField: "Authorization")
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        // When: T를 직접 반환 (Basic Auth 인증 포함)
+        let user: MockUser = try await client.get("/users/me")
+
+        // Then: 값 검증 + 인증 헤더 검증
+        let expectedHeader = "Basic " + "test_user:test_password".data(using: .utf8)!.base64EncodedString()
+        #expect(user.id == 1)
+        #expect(user.name == "Test User")
+        #expect(capturedAuthHeader == expectedHeader)
+    }
+
     // MARK: - Convenience Methods Test
     @Test func testConvenienceMethods() async throws {
         // Given: 클라이언트 생성

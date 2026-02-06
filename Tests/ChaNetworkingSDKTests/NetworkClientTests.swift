@@ -78,6 +78,56 @@ final class NetworkClientTests {
         }
     }
 
+    // MARK: - Value-Only Response Test
+    @Test func testResponseDataValueOnly() async throws {
+        let (client, key) = createTestClient()
+
+        let mockJSON = #"{"id":1,"name":"Soo"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        // When: T를 직접 반환받음 (ApiResponse 래핑 없이)
+        let user: MockUser = try await client.responseData(.get, "/users")
+
+        // Then: 디코딩된 값만 검증
+        #expect(user == MockUser(id: 1, name: "Soo"))
+    }
+
+    @Test func testValueOnlyServerError() async throws {
+        let (client, key) = createTestClient()
+
+        let mockJSON = #"{"error":"Not Found"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 404,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        // When & Then: T 반환 오버로드에서도 에러가 정상적으로 throw 되는지 검증
+        do {
+            let _: MockUser = try await client.responseData(.get, "/users/999")
+            Issue.record("Expected error was not thrown")
+        } catch let error as NetworkError {
+            switch error {
+            case .serverError(let code, _):
+                #expect(code == 404)
+            default:
+                Issue.record("Unexpected error type: \(error)")
+            }
+        }
+    }
+
     // MARK: - Combine Publisher Test
     @Test func testResponseDataPublisher() async throws {
         let (client, key) = createTestClient()

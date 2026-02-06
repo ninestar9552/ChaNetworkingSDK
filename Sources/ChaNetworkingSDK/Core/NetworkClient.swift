@@ -102,6 +102,55 @@ extension NetworkClient {
 
 
 
+    // MARK: - Value-Only Response Methods
+
+    /// 디코딩된 모델을 직접 반환합니다. (Dictionary 파라미터 버전)
+    ///
+    /// `ApiResponse<T>` 대신 디코딩된 값 `T`만 반환하는 편의 메서드입니다.
+    /// HTTP 응답 메타정보(statusCode, headers 등)가 필요 없을 때 간결하게 사용합니다.
+    ///
+    /// Swift의 return type overloading을 활용하여 타입 어노테이션으로 구분합니다:
+    /// ```swift
+    /// let user: User = try await client.responseData(.get, "/users/1")              // 값만
+    /// let response: ApiResponse<User> = try await client.responseData(.get, "/users/1") // 전체 응답
+    /// ```
+    public func responseData<T: Decodable>(
+        _ httpMethod: Alamofire.HTTPMethod,
+        _ url: String,
+        parameters: Parameters? = nil,
+        encoding: ParameterEncoding? = nil,
+        headers: [String: String]? = nil,
+        decoder: JSONDecoder = JSONDecoder()
+    ) async throws -> T {
+        let response: ApiResponse<T> = try await responseData(
+            httpMethod, url,
+            parameters: parameters,
+            encoding: encoding,
+            headers: headers,
+            decoder: decoder
+        )
+        return response.value
+    }
+
+    /// 디코딩된 모델을 직접 반환합니다. (Encodable 파라미터 버전)
+    public func responseData<T: Decodable, P: Encodable & Sendable>(
+        _ httpMethod: Alamofire.HTTPMethod,
+        _ url: String,
+        parameters: P?,
+        encoder: ParameterEncoder,
+        headers: [String: String]? = nil,
+        decoder: JSONDecoder = JSONDecoder()
+    ) async throws -> T {
+        let response: ApiResponse<T> = try await responseData(
+            httpMethod, url,
+            parameters: parameters,
+            encoder: encoder,
+            headers: headers,
+            decoder: decoder
+        )
+        return response.value
+    }
+
     /// API 요청을 수행하고 디코딩된 모델을 반환합니다.
     ///
     /// - Parameters:

@@ -210,6 +210,170 @@ final class BaseClientTests {
         #expect(capturedURLs.last == "https://other-api.com/data")
     }
 
+    // MARK: - Value-Only Convenience Methods Test
+
+    @Test func testValueOnlyGet() async throws {
+        // Given: 클라이언트 생성
+        let (client, key) = createTestClient()
+
+        let mockJSON = #"{"id":1,"name":"Test User"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        // When: T를 직접 반환 (ApiResponse 래핑 없이)
+        let user: MockUser = try await client.get("/users/1")
+
+        // Then: 디코딩된 값만 검증
+        #expect(user.id == 1)
+        #expect(user.name == "Test User")
+    }
+
+    @Test func testValueOnlyConvenienceMethods() async throws {
+        // Given: 클라이언트 생성
+        let (client, key) = createTestClient()
+
+        let mockJSON = #"{"id":1,"name":"Test"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        // GET
+        let getUser: MockUser = try await client.get("/users/1")
+        #expect(getUser.id == 1)
+
+        // POST
+        let postUser: MockUser = try await client.post(
+            "/users",
+            parameters: ["name": "New User"]
+        )
+        #expect(postUser.id == 1)
+
+        // PUT
+        let putUser: MockUser = try await client.put(
+            "/users/1",
+            parameters: ["name": "Updated"]
+        )
+        #expect(putUser.id == 1)
+
+        // PATCH
+        let patchUser: MockUser = try await client.patch(
+            "/users/1",
+            parameters: ["name": "Patched"]
+        )
+        #expect(patchUser.id == 1)
+    }
+
+    @Test func testValueOnlyEncodableQuery() async throws {
+        // Given: 클라이언트 생성
+        let (client, key) = createTestClient()
+
+        struct SearchQuery: Encodable {
+            let keyword: String
+            let page: Int
+        }
+
+        var capturedURL: String?
+        let mockJSON = #"{"id":1,"name":"Test"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            capturedURL = request.url?.absoluteString
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        // When: T 반환 + Encodable 쿼리
+        let query = SearchQuery(keyword: "swift", page: 1)
+        let user: MockUser = try await client.get("/search", query: query)
+
+        // Then
+        #expect(user.id == 1)
+        #expect(capturedURL?.contains("keyword=swift") == true)
+        #expect(capturedURL?.contains("page=1") == true)
+    }
+
+    @Test func testValueOnlyEncodableBody() async throws {
+        // Given: 클라이언트 생성
+        let (client, key) = createTestClient()
+
+        struct CreateUserRequest: Encodable {
+            let name: String
+            let email: String
+        }
+
+        var capturedBody: [String: Any]?
+        let mockJSON = #"{"id":1,"name":"Cha"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            if let bodyData = request.httpBodyStream {
+                let data = Data(reading: bodyData)
+                capturedBody = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            }
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 201,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        // When: T 반환 + Encodable body
+        let body = CreateUserRequest(name: "Cha", email: "cha@example.com")
+        let user: MockUser = try await client.post("/users", body: body)
+
+        // Then
+        #expect(user.id == 1)
+        #expect(user.name == "Cha")
+        #expect(capturedBody?["name"] as? String == "Cha")
+        #expect(capturedBody?["email"] as? String == "cha@example.com")
+    }
+
+    @Test func testValueOnlyServerError() async throws {
+        // Given: 클라이언트 생성
+        let (client, key) = createTestClient()
+
+        let mockJSON = #"{"error":"Not Found"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 404,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        // When & Then: T 반환 오버로드에서도 에러가 정상적으로 throw 되는지 검증
+        do {
+            let _: MockUser = try await client.get("/users/999")
+            Issue.record("Expected error was not thrown")
+        } catch let error as NetworkError {
+            switch error {
+            case .serverError(let code, let message):
+                #expect(code == 404)
+                #expect(message == #"{"error":"Not Found"}"#)
+            default:
+                Issue.record("Unexpected error type: \(error)")
+            }
+        }
+    }
+
     // MARK: - Encodable Query Test
     @Test func testEncodableQuery() async throws {
         // Given: 클라이언트 생성

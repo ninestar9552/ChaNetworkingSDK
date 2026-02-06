@@ -8,6 +8,7 @@ Swift로 작성된 간결하고 강력한 네트워킹 SDK입니다. Alamofire�
 - ✅ **Combine 지원** - Publisher 기반 API
 - ✅ **타입 안전성** - 제네릭을 활용한 타입 안전한 응답 처리
 - ✅ **유연한 에러 핸들링** - 커스텀 가능한 에러 처리 전략
+- ✅ **유연한 응답 처리** - `ApiResponse<T>` (전체 응답) 또는 `T` (값만) 선택 가능
 - ✅ **풍부한 응답 정보** - 디코딩된 모델, Raw Data, HTTP Response 모두 제공
 - ✅ **로깅 지원** - 디버깅을 위한 요청/응답 로깅 기능
 - ✅ **BaseClient** - baseURL 기반 간편한 API 호출
@@ -21,7 +22,7 @@ Swift로 작성된 간결하고 강력한 네트워킹 SDK입니다. Alamofire�
 - macOS 12.0+
 - watchOS 8.0+
 - tvOS 15.0+
-- Swift 5.5+
+- Swift 6.0+
 
 ## 설치
 
@@ -64,12 +65,20 @@ let client = NetworkClient(
     logging: true
 )
 
-// GET 요청
+// GET 요청 - 전체 응답
 let response: ApiResponse<User> = try await client.responseData(
     .get,
     "https://api.example.com/users/1"
 )
 print(response.value.name)
+print(response.httpResponse.statusCode)
+
+// GET 요청 - 값만
+let user: User = try await client.responseData(
+    .get,
+    "https://api.example.com/users/1"
+)
+print(user.name)
 ```
 
 ### BaseClient (권장)
@@ -82,12 +91,16 @@ let client = BaseClient(
     logging: true
 )
 
-// 상대 경로로 요청
-let user: ApiResponse<User> = try await client.get("/users/1")
-let posts: ApiResponse<[Post]> = try await client.get("/posts")
+// 값만 반환 — 타입 어노테이션으로 오버로드 결정
+let user: User = try await client.get("/users/1")
+let posts: [Post] = try await client.get("/posts")
+
+// 전체 응답 반환 — statusCode, headers 등 메타정보 접근 가능
+let response: ApiResponse<User> = try await client.get("/users/1")
+print(response.httpResponse.statusCode)
 
 // POST 요청
-let newUser: ApiResponse<User> = try await client.post(
+let newUser: User = try await client.post(
     "/users",
     parameters: ["name": "Cha", "email": "cha@example.com"]
 )
@@ -152,7 +165,7 @@ struct SearchQuery: Encodable {
 }
 
 let query = SearchQuery(keyword: "swift", page: 1, limit: 20)
-let results: ApiResponse<[Post]> = try await client.get("/posts", query: query)
+let results: [Post] = try await client.get("/posts", query: query)
 // → /posts?keyword=swift&page=1&limit=20
 
 // Request Body (POST, PUT, PATCH)
@@ -162,7 +175,11 @@ struct CreateUserRequest: Encodable {
 }
 
 let request = CreateUserRequest(name: "Cha", email: "cha@example.com")
-let user: ApiResponse<User> = try await client.post("/users", body: request)
+let user: User = try await client.post("/users", body: request)
+
+// 전체 응답이 필요하면 ApiResponse<T>로 받기
+let response: ApiResponse<User> = try await client.post("/users", body: request)
+print(response.httpResponse.statusCode)
 ```
 
 | 메서드 | Dictionary | Encodable |
@@ -223,8 +240,12 @@ try client.tokenStorage.saveRefreshToken("your_refresh_token")
 
 ```swift
 // 자동으로 Authorization: Bearer {token} 헤더 추가
+let user: UserProfile = try await client.get("/users/me")
+print("사용자: \(user.name)")
+
+// 전체 응답이 필요한 경우
 let response: ApiResponse<UserProfile> = try await client.get("/users/me")
-print("사용자: \(response.value.name)")
+print("상태: \(response.httpResponse.statusCode)")
 ```
 
 ### 자동 처리 기능
@@ -281,7 +302,7 @@ let client = BasicAuthClient(
 )
 
 // 자동으로 Authorization: Basic {base64} 헤더 추가
-let response: ApiResponse<UserProfile> = try await client.get("/users/me")
+let user: UserProfile = try await client.get("/users/me")
 ```
 
 ## 에러 처리
@@ -289,7 +310,7 @@ let response: ApiResponse<UserProfile> = try await client.get("/users/me")
 ### NetworkError 타입
 
 ```swift
-public enum NetworkError: Error {
+public enum NetworkError: Error, LocalizedError {
     case noResponse                              // 응답 없음
     case noData                                  // 데이터 없음 (커스텀 핸들러용)
     case decodingFailed(Error)                   // 디코딩 실패
@@ -298,12 +319,14 @@ public enum NetworkError: Error {
 }
 ```
 
+`LocalizedError`를 채택하여 `error.localizedDescription`으로 사용자에게 의미 있는 에러 메시지를 제공합니다.
+
 ### 에러 처리 예시
 
 ```swift
 do {
-    let response: ApiResponse<User> = try await client.get("/users/1")
-    print(response.value)
+    let user: User = try await client.get("/users/1")
+    print(user)
 } catch let error as NetworkError {
     switch error {
     case .noResponse:
@@ -394,6 +417,16 @@ public struct ApiResponse<Value> {
     public let data: Data                // Raw Data
     public let httpResponse: HTTPURLResponse // HTTP 메타정보
 }
+
+// Value가 Sendable이면 ApiResponse도 자동으로 Sendable
+extension ApiResponse: Sendable where Value: Sendable {}
+```
+
+모든 API 메서드는 `ApiResponse<T>` 또는 `T` 직접 반환을 지원합니다. 타입 어노테이션으로 구분:
+
+```swift
+let user: User = try await client.get("/users/1")              // 값만
+let response: ApiResponse<User> = try await client.get("/users/1") // 전체 응답
 ```
 
 ## 프로젝트 구조
