@@ -420,7 +420,7 @@ Sources/ChaNetworkingSDK/
 │   │   ├── BearerTokenRetrier.swift     # 401 재시도 및 토큰 갱신
 │   │   └── BasicAuthAdapter.swift       # Basic Auth 처리
 │   └── Clients/
-│       ├── AuthenticatedClient.swift    # 인증 클라이언트 프로토콜
+│       ├── EndpointClient.swift         # baseURL 기반 클라이언트 프로토콜
 │       ├── BaseClient.swift             # 기본 클라이언트 (인증 없음)
 │       ├── BearerTokenClient.swift      # Bearer Token 클라이언트
 │       └── BasicAuthClient.swift        # Basic Auth 클라이언트
