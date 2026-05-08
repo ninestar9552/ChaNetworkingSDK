@@ -23,7 +23,7 @@ import Foundation
 /// // PUT 요청 (응답 없음)
 /// let response: ApiResponse<EmptyResponse> = try await client.put("/users/1/activate")
 /// ```
-public struct EmptyResponse: Codable, Equatable {
+public struct EmptyResponse: Codable, Equatable, Sendable {
     /// 빈 응답 초기화
     public init() {}
     // 프로퍼티가 없는 struct는 Swift가 Equatable을 자동 합성합니다.
