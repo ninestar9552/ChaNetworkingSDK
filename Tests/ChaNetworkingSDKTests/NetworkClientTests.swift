@@ -100,6 +100,28 @@ final class NetworkClientTests {
         #expect(user == MockUser(id: 1, name: "Soo"))
     }
 
+    @Test func testRawDataAndStringResponse() async throws {
+        let (client, key) = createTestClient()
+
+        let mockText = "plain response"
+        let mockData = mockText.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "text/plain"]
+            )!
+            return (response, mockData)
+        }
+
+        let dataResponse: ApiResponse<Data> = try await client.responseData(.get, "/plain")
+        #expect(dataResponse.value == mockData)
+
+        let stringResponse: ApiResponse<String> = try await client.responseData(.get, "/plain")
+        #expect(stringResponse.value == mockText)
+    }
+
     @Test func testValueOnlyServerError() async throws {
         let (client, key) = createTestClient()
 

@@ -27,9 +27,27 @@ extension DataRequest {
         // transform()이 response/data nil을 커버하지 않을 가능성을 대비 (Fail-safe)
         guard let httpResponse = dataResponse.response else { throw NetworkError.noResponse }
 
-        // 빈 응답 처리: EmptyResponse 타입일 때만 허용
         let data = dataResponse.data ?? Data()
-        if data.isEmpty && T.self != EmptyResponse.self {
+
+        if T.self == Data.self, let value = data as? T {
+            return ApiResponse(value: value, data: data, httpResponse: httpResponse)
+        }
+
+        if T.self == String.self {
+            guard let string = String(data: data, encoding: .utf8),
+                  let value = string as? T else {
+                throw NetworkError.decodingFailed(
+                    DecodingError.dataCorrupted(
+                        DecodingError.Context(codingPath: [], debugDescription: "Failed to decode response data as UTF-8 String")
+                    )
+                )
+            }
+
+            return ApiResponse(value: value, data: data, httpResponse: httpResponse)
+        }
+
+        // 빈 응답 처리: EmptyPayload 타입일 때만 허용
+        if data.isEmpty && T.self != EmptyPayload.self {
             throw NetworkError.noData
         }
 
@@ -59,7 +77,7 @@ extension DataRequest {
         decoder: JSONDecoder
     ) async throws -> ApiResponse<T> {
 
-        let dataResponse = await self.serializingData().response
+        let dataResponse = await self.validate(statusCode: 200..<300).serializingData().response
 
         self.log(dataResponse: dataResponse, logging: client.logging)
 
@@ -87,7 +105,7 @@ extension DataRequest {
         decoder: JSONDecoder
     ) -> AnyPublisher<ApiResponse<T>, Error> {
 
-        return self.publishData()
+        return self.validate(statusCode: 200..<300).publishData()
             .tryMap { dataResponse in
 
                 self.log(dataResponse: dataResponse, logging: client.logging)

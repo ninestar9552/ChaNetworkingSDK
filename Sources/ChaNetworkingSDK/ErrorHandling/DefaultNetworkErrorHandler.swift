@@ -15,8 +15,10 @@ public struct DefaultNetworkErrorHandler: NetworkErrorHandler {
     public init() {}
 
     public func transform(response: HTTPURLResponse?, data: Data?, error: AFError?) -> Error? {
-        if let error = error { return NetworkError.underlying(error) }
-        guard let response = response else { return NetworkError.noResponse }
+        guard let response = response else {
+            if let error = error { return NetworkError.underlying(error) }
+            return NetworkError.noResponse
+        }
 
         // 성공 응답
         if (200..<300).contains(response.statusCode) {

@@ -128,7 +128,7 @@ final class BasicAuthClientTests {
     }
     
     // MARK: - Empty Response Test
-    @Test func testEmptyResponse() async throws {
+    @Test func testEmptyPayload() async throws {
         // Given: 클라이언트 생성
         let (client, key) = createTestClient()
         
@@ -142,8 +142,8 @@ final class BasicAuthClientTests {
             return (response, Data())  // 빈 응답
         }
 
-        // When: DELETE with EmptyResponse
-        let response: ApiResponse<ChaNetworkingSDK.EmptyResponse> = try await client.delete("/users/1")
+        // When: DELETE with EmptyPayload
+        let response: ApiResponse<ChaNetworkingSDK.EmptyPayload> = try await client.delete("/users/1")
 
         // Then
         #expect(response.httpResponse.statusCode == 204)

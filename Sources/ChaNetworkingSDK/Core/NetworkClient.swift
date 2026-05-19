@@ -54,8 +54,10 @@ extension NetworkClient {
 
         var httpHeaders = HTTPHeaders(headers ?? [:])
         // Content-Type은 Alamofire의 인코딩 전략(JSONEncoding, URLEncoding 등)이
-        // 자동으로 설정하므로 여기서는 Accept만 지정합니다.
-        httpHeaders.update(.accept("application/json"))
+        // 자동으로 설정하므로 여기서는 Accept 기본값만 지정합니다.
+        if httpHeaders.value(for: "Accept") == nil {
+            httpHeaders.update(.accept(T.self == Data.self || T.self == String.self ? "*/*" : "application/json"))
+        }
 
         let dataRequest: DataRequest = self.session.request(
             url,
@@ -87,7 +89,9 @@ extension NetworkClient {
     ) async throws -> ApiResponse<T> {
 
         var httpHeaders = HTTPHeaders(headers ?? [:])
-        httpHeaders.update(.accept("application/json"))
+        if httpHeaders.value(for: "Accept") == nil {
+            httpHeaders.update(.accept(T.self == Data.self || T.self == String.self ? "*/*" : "application/json"))
+        }
 
         let dataRequest: DataRequest = self.session.request(
             url,
@@ -98,6 +102,53 @@ extension NetworkClient {
         )
 
         return try await dataRequest.serializedResponse(using: self, decoder: decoder)
+    }
+
+    /// multipart/form-data 업로드를 수행하고 JSON 응답을 디코딩합니다.
+    public func uploadMultipart<T: Decodable>(
+        to url: String,
+        method: Alamofire.HTTPMethod = .post,
+        fields: [MultipartField] = [],
+        files: [MultipartFile] = [],
+        headers: [String: String]? = nil,
+        decoder: JSONDecoder = JSONDecoder(),
+        progress: (@Sendable (Progress) -> Void)? = nil
+    ) async throws -> ApiResponse<T> {
+
+        var httpHeaders = HTTPHeaders(headers ?? [:])
+        if httpHeaders.value(for: "Accept") == nil {
+            httpHeaders.update(.accept("application/json"))
+        }
+
+        let uploadRequest = self.session.upload(
+            multipartFormData: { multipartFormData in
+                fields.forEach { field in
+                    if let mimeType = field.mimeType {
+                        multipartFormData.append(field.data, withName: field.name, mimeType: mimeType)
+                    } else {
+                        multipartFormData.append(field.data, withName: field.name)
+                    }
+                }
+
+                files.forEach { file in
+                    multipartFormData.append(
+                        file.data,
+                        withName: file.name,
+                        fileName: file.fileName,
+                        mimeType: file.mimeType
+                    )
+                }
+            },
+            to: url,
+            method: method,
+            headers: httpHeaders
+        )
+
+        if let progress {
+            uploadRequest.uploadProgress(closure: progress)
+        }
+
+        return try await uploadRequest.serializedResponse(using: self, decoder: decoder)
     }
 
 
@@ -182,7 +233,9 @@ extension NetworkClient {
     )-> AnyPublisher<ApiResponse<T>, Error> {
 
         var httpHeaders = HTTPHeaders(headers ?? [:])
-        httpHeaders.update(.accept("application/json"))
+        if httpHeaders.value(for: "Accept") == nil {
+            httpHeaders.update(.accept(T.self == Data.self || T.self == String.self ? "*/*" : "application/json"))
+        }
 
         let dataRequest: DataRequest = self.session.request(
             url,
@@ -214,7 +267,9 @@ extension NetworkClient {
     ) -> AnyPublisher<ApiResponse<T>, Error> {
 
         var httpHeaders = HTTPHeaders(headers ?? [:])
-        httpHeaders.update(.accept("application/json"))
+        if httpHeaders.value(for: "Accept") == nil {
+            httpHeaders.update(.accept(T.self == Data.self || T.self == String.self ? "*/*" : "application/json"))
+        }
 
         let dataRequest: DataRequest = self.session.request(
             url,

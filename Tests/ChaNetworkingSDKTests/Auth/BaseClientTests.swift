@@ -126,8 +126,62 @@ final class BaseClientTests {
         #expect(patchResponse.httpResponse.statusCode == 200)
     }
 
+    @Test func testRawStringConvenience() async throws {
+        let (client, key) = createTestClient()
+
+        let mockText = "hello"
+        MockURLProtocol.setHandler(key) { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "text/plain"]
+            )!
+            return (response, mockText.data(using: .utf8)!)
+        }
+
+        let response: ApiResponse<String> = try await client.get("/hello")
+        #expect(response.value == mockText)
+    }
+
+    @Test func testMultipartUpload() async throws {
+        let (client, key) = createTestClient()
+
+        var capturedContentType: String?
+        let mockJSON = #"{"id":1,"name":"Uploaded"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            capturedContentType = request.value(forHTTPHeaderField: "Content-Type")
+            #expect(request.httpMethod == "POST")
+            #expect(request.url?.absoluteString == "https://api.example.com/upload")
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        let response: ApiResponse<MockUser> = try await client.uploadMultipart(
+            "/upload",
+            fields: [MultipartField(name: "name", value: "sample")],
+            files: [
+                MultipartFile(
+                    name: "file",
+                    data: Data("file-data".utf8),
+                    fileName: "sample.txt",
+                    mimeType: "text/plain"
+                )
+            ]
+        )
+
+        #expect(response.value == MockUser(id: 1, name: "Uploaded"))
+        #expect(capturedContentType?.contains("multipart/form-data") == true)
+    }
+
     // MARK: - Empty Response Test
-    @Test func testEmptyResponse() async throws {
+    @Test func testEmptyPayload() async throws {
         // Given: 클라이언트 생성
         let (client, key) = createTestClient()
 
@@ -141,8 +195,8 @@ final class BaseClientTests {
             return (response, Data())  // 빈 응답
         }
 
-        // When: DELETE with EmptyResponse
-        let response: ApiResponse<ChaNetworkingSDK.EmptyResponse> = try await client.delete("/users/1")
+        // When: DELETE with EmptyPayload
+        let response: ApiResponse<ChaNetworkingSDK.EmptyPayload> = try await client.delete("/users/1")
 
         // Then
         #expect(response.httpResponse.statusCode == 204)

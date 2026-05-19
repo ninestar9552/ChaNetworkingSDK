@@ -88,6 +88,27 @@ extension EndpointClient where Self: NetworkClient {
             decoder: decoder
         )
     }
+
+    /// multipart/form-data 업로드 요청입니다.
+    public func uploadMultipart<T: Decodable>(
+        _ path: String,
+        method: Alamofire.HTTPMethod = .post,
+        fields: [MultipartField] = [],
+        files: [MultipartFile] = [],
+        headers: [String: String]? = nil,
+        decoder: JSONDecoder = JSONDecoder(),
+        progress: (@Sendable (Progress) -> Void)? = nil
+    ) async throws -> ApiResponse<T> {
+        try await (self as NetworkClient).uploadMultipart(
+            to: buildURL(path: path),
+            method: method,
+            fields: fields,
+            files: files,
+            headers: headers,
+            decoder: decoder,
+            progress: progress
+        )
+    }
 }
 
 // MARK: - Convenience Methods (async/await)
@@ -210,6 +231,7 @@ extension EndpointClient where Self: NetworkClient {
             decoder: decoder
         )
     }
+
 }
 
 // MARK: - Value-Only Convenience Methods (async/await)

@@ -1,5 +1,5 @@
 //
-//  EmptyResponseTests.swift
+//  EmptyPayloadTests.swift
 //  ChaNetworkingSDK
 //
 //  Created by cha on 11/17/25.
@@ -10,8 +10,8 @@ import Foundation
 import Alamofire
 @testable import ChaNetworkingSDK
 
-// MARK: - EmptyResponse Tests
-final class EmptyResponseTests {
+// MARK: - EmptyPayload Tests
+final class EmptyPayloadTests {
 
     // Helper: 테스트용 클라이언트 생성
     func createTestClient() -> (client: NetworkClient, key: String) {
@@ -27,7 +27,7 @@ final class EmptyResponseTests {
         return (client, key)
     }
 
-    @Test func testEmptyResponseWith204() async throws {
+    @Test func testEmptyPayloadWith204() async throws {
         // Given: 클라이언트 생성 및 204 No Content 응답
         let (client, key) = createTestClient()
         
@@ -42,7 +42,7 @@ final class EmptyResponseTests {
         }
 
         // When
-        let response: ApiResponse<ChaNetworkingSDK.EmptyResponse> = try await client.responseData(
+        let response: ApiResponse<ChaNetworkingSDK.EmptyPayload> = try await client.responseData(
             .delete,
             "https://api.example.com/users/1"
         )
@@ -52,7 +52,7 @@ final class EmptyResponseTests {
         #expect(response.data.isEmpty)
     }
 
-    @Test func testEmptyResponseWith200() async throws {
+    @Test func testEmptyPayloadWith200() async throws {
         // Given: 클라이언트 생성 및 200 OK but empty body
         let (client, key) = createTestClient()
         
@@ -67,7 +67,7 @@ final class EmptyResponseTests {
         }
 
         // When
-        let response: ApiResponse<ChaNetworkingSDK.EmptyResponse> = try await client.responseData(
+        let response: ApiResponse<ChaNetworkingSDK.EmptyPayload> = try await client.responseData(
             .post,
             "https://api.example.com/users/1/activate"
         )
@@ -77,31 +77,31 @@ final class EmptyResponseTests {
         #expect(!response.data.isEmpty)
     }
 
-    @Test func testEmptyResponseDecoding() throws {
+    @Test func testEmptyPayloadDecoding() throws {
         // Given: 빈 JSON 객체
         let emptyJSON = "{}".data(using: .utf8)!
         let decoder = JSONDecoder()
 
         // When & Then: try가 throw 없이 성공하면 디코딩 성공
-        _ = try decoder.decode(ChaNetworkingSDK.EmptyResponse.self, from: emptyJSON)
+        _ = try decoder.decode(ChaNetworkingSDK.EmptyPayload.self, from: emptyJSON)
     }
 
-    @Test func testEmptyResponseEquality() {
+    @Test func testEmptyPayloadEquality() {
         // Given
-        let response1 = ChaNetworkingSDK.EmptyResponse()
-        let response2 = ChaNetworkingSDK.EmptyResponse()
+        let response1 = ChaNetworkingSDK.EmptyPayload()
+        let response2 = ChaNetworkingSDK.EmptyPayload()
 
-        // Then: 모든 EmptyResponse 인스턴스는 동일
+        // Then: 모든 EmptyPayload 인스턴스는 동일
         #expect(response1 == response2)
     }
 
-    @Test func testEmptyResponseEncoding() throws {
+    @Test func testEmptyPayloadEncoding() throws {
         // Given
-        let emptyResponse = ChaNetworkingSDK.EmptyResponse()
+        let emptyPayload = ChaNetworkingSDK.EmptyPayload()
         let encoder = JSONEncoder()
 
         // When
-        let encoded = try encoder.encode(emptyResponse)
+        let encoded = try encoder.encode(emptyPayload)
         let jsonString = String(data: encoded, encoding: .utf8)
 
         // Then: 빈 JSON 객체로 인코딩됨
