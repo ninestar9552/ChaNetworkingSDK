@@ -8,6 +8,10 @@
 import Foundation
 import Alamofire
 
+private struct UncheckedSendableBox<T>: @unchecked Sendable {
+    let value: T
+}
+
 /// Bearer Token 인증을 사용하는 Network Client
 /// - 자동으로 모든 요청에 Bearer Token 추가
 /// - 401 에러 발생 시 자동으로 Token 갱신 후 1번 재시도
@@ -55,6 +59,40 @@ open class BearerTokenClient: NetworkClient, EndpointClient {
 
         super.init(
             session: session,
+            encoding: encoding,
+            errorHandler: errorHandler,
+            logging: logging
+        )
+    }
+
+    /// async/await 기반 Token Refresh 클로저를 받는 편의 초기화자입니다.
+    ///
+    /// 기존 callback 기반 `TokenRefreshHandler`도 유지하되, Swift Concurrency 기반
+    /// 서비스 앱에서는 이 초기화자를 사용하면 `Task` 래핑 코드를 앱에 둘 필요가 없습니다.
+    public convenience init(
+        baseURL: String,
+        configuration: URLSessionConfiguration = .default,
+        tokenStorage: TokenStorage = KeychainTokenStorage(),
+        asyncTokenRefresher: @escaping AsyncTokenRefreshHandler,
+        encoding: ParameterEncoding = JSONEncoding.default,
+        errorHandler: NetworkErrorHandler = DefaultNetworkErrorHandler(),
+        logging: Bool = false
+    ) {
+        self.init(
+            baseURL: baseURL,
+            configuration: configuration,
+            tokenStorage: tokenStorage,
+            tokenRefresher: { refreshToken, completion in
+                let completionBox = UncheckedSendableBox(value: completion)
+                Task {
+                    do {
+                        let tokens = try await asyncTokenRefresher(refreshToken)
+                        completionBox.value(.success(tokens))
+                    } catch {
+                        completionBox.value(.failure(error))
+                    }
+                }
+            },
             encoding: encoding,
             errorHandler: errorHandler,
             logging: logging

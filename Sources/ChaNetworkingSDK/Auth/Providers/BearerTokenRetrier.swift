@@ -33,6 +33,11 @@ public typealias TokenRefreshHandler = (
     _ completion: @escaping (Result<TokenPair, Error>) -> Void
 ) -> Void
 
+/// Swift Concurrency 기반 Token Refresh 핸들러입니다.
+public typealias AsyncTokenRefreshHandler = @Sendable (
+    _ currentRefreshToken: String
+) async throws -> TokenPair
+
 /// non-Sendable 값을 @Sendable 클로저에서 안전하게 전달하기 위한 래퍼
 ///
 /// `DispatchQueue.async`는 `@Sendable` 클로저를 요구하지만,
@@ -77,7 +82,7 @@ public final class BearerTokenRetrier: RequestRetrier, @unchecked Sendable {
               response.statusCode == 401,
               request.retryCount == 0 else {
             // 401이 아니거나 이미 재시도했으면 재시도하지 않음
-            completion(.doNotRetryWithError(error))
+            completion(.doNotRetry)
             return
         }
 

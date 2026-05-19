@@ -44,6 +44,28 @@ final class BearerTokenClientTests {
         return (client, key, tokenStorage)
     }
 
+    func createAsyncRefreshTestClient() -> (client: BearerTokenClient, key: String, storage: MockTokenStorage) {
+        let key = UUID().uuidString
+        let tokenStorage = MockTokenStorage()
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        configuration.httpAdditionalHeaders = ["X-Test-ID": key]
+
+        let client = BearerTokenClient(
+            baseURL: "https://api.example.com",
+            configuration: configuration,
+            tokenStorage: tokenStorage,
+            asyncTokenRefresher: { refreshToken in
+                #expect(refreshToken == "valid_refresh_token")
+                return TokenPair(accessToken: "async_access_token", refreshToken: "async_refresh_token")
+            },
+            logging: true
+        )
+
+        return (client, key, tokenStorage)
+    }
+
     // MARK: - Authorization Header Test
     @Test func testAuthorizationHeaderAdded() async throws {
         // Given: 클라이언트 생성 및 토큰 저장
@@ -123,6 +145,47 @@ final class BearerTokenClientTests {
         #expect(tokenStorage.getRefreshToken() == "new_refresh_token")
     }
 
+    @Test func testAsyncTokenRefreshOn401() async throws {
+        let (client, key, tokenStorage) = createAsyncRefreshTestClient()
+        try tokenStorage.saveAccessToken("expired_token")
+        try tokenStorage.saveRefreshToken("valid_refresh_token")
+
+        var requestCount = 0
+        var capturedAuthHeaderOnRetry: String?
+        let mockJSON = #"{"id":1,"name":"Test User"}"#.data(using: .utf8)!
+
+        MockURLProtocol.setHandler(key) { request in
+            requestCount += 1
+
+            if requestCount == 1 {
+                let response = HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: 401,
+                    httpVersion: nil,
+                    headerFields: nil
+                )!
+                return (response, Data())
+            }
+
+            capturedAuthHeaderOnRetry = request.value(forHTTPHeaderField: "Authorization")
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        let response: ApiResponse<MockUser> = try await client.get("/users/me")
+
+        #expect(requestCount == 2)
+        #expect(capturedAuthHeaderOnRetry == "Bearer async_access_token")
+        #expect(response.httpResponse.statusCode == 200)
+        #expect(tokenStorage.getAccessToken() == "async_access_token")
+        #expect(tokenStorage.getRefreshToken() == "async_refresh_token")
+    }
+
     // MARK: - Max Retry Count Test
     @Test func testMaxRetryCount() async throws {
         // Given: 클라이언트 생성 및 만료된 토큰
@@ -148,9 +211,17 @@ final class BearerTokenClientTests {
         do {
             let _: ApiResponse<MockUser> = try await client.get("/users/me")
             Issue.record("Expected error was not thrown")
-        } catch {
+        } catch let error as NetworkError {
             // Then: 최대 2번 시도 (원래 요청 1번 + 재시도 1번)
             #expect(requestCount == 2)
+
+            if case .serverError(let statusCode, _) = error {
+                #expect(statusCode == 401)
+            } else {
+                Issue.record("Unexpected error type: \(error)")
+            }
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
         }
     }
 
@@ -226,7 +297,7 @@ final class BearerTokenClientTests {
     }
 
     // MARK: - Empty Response Test
-    @Test func testEmptyResponse() async throws {
+    @Test func testEmptyPayload() async throws {
         // Given: 클라이언트 생성
         let (client, key, tokenStorage) = createTestClient()
         try tokenStorage.saveAccessToken("test_token")
@@ -241,8 +312,8 @@ final class BearerTokenClientTests {
             return (response, Data())  // 빈 응답
         }
 
-        // When: DELETE with EmptyResponse
-        let response: ApiResponse<ChaNetworkingSDK.EmptyResponse> = try await client.delete("/users/1")
+        // When: DELETE with EmptyPayload
+        let response: ApiResponse<ChaNetworkingSDK.EmptyPayload> = try await client.delete("/users/1")
 
         // Then
         #expect(response.httpResponse.statusCode == 204)
