@@ -24,6 +24,17 @@ public struct MultipartField: Sendable {
         self.data = data
         self.mimeType = mimeType
     }
+
+    public init<Value: Encodable>(
+        name: String,
+        json value: Value,
+        encoder: JSONEncoder = JSONEncoder(),
+        mimeType: String? = nil
+    ) throws {
+        self.name = name
+        self.data = try encoder.encode(value)
+        self.mimeType = mimeType
+    }
 }
 
 /// multipart/form-data 파일 필드입니다.
