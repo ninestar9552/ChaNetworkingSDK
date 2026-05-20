@@ -109,6 +109,28 @@ extension EndpointClient where Self: NetworkClient {
             progress: progress
         )
     }
+
+    /// multipart/form-data 업로드 요청 후 디코딩된 값만 반환합니다.
+    public func uploadMultipart<T: Decodable>(
+        _ path: String,
+        method: Alamofire.HTTPMethod = .post,
+        fields: [MultipartField] = [],
+        files: [MultipartFile] = [],
+        headers: [String: String]? = nil,
+        decoder: JSONDecoder = JSONDecoder(),
+        progress: (@Sendable (Progress) -> Void)? = nil
+    ) async throws -> T {
+        let response: ApiResponse<T> = try await uploadMultipart(
+            path,
+            method: method,
+            fields: fields,
+            files: files,
+            headers: headers,
+            decoder: decoder,
+            progress: progress
+        )
+        return response.value
+    }
 }
 
 // MARK: - Convenience Methods (async/await)

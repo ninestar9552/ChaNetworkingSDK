@@ -151,8 +151,6 @@ extension NetworkClient {
         return try await uploadRequest.serializedResponse(using: self, decoder: decoder)
     }
 
-
-
     // MARK: - Value-Only Response Methods
 
     /// 디코딩된 모델을 직접 반환합니다. (Dictionary 파라미터 버전)
@@ -280,5 +278,27 @@ extension NetworkClient {
         )
 
         return dataRequest.publish(using: self, decoder: decoder)
+    }
+    
+    /// multipart/form-data 업로드를 수행하고 디코딩된 값만 반환합니다.
+    public func uploadMultipart<T: Decodable>(
+        to url: String,
+        method: Alamofire.HTTPMethod = .post,
+        fields: [MultipartField] = [],
+        files: [MultipartFile] = [],
+        headers: [String: String]? = nil,
+        decoder: JSONDecoder = JSONDecoder(),
+        progress: (@Sendable (Progress) -> Void)? = nil
+    ) async throws -> T {
+        let response: ApiResponse<T> = try await uploadMultipart(
+            to: url,
+            method: method,
+            fields: fields,
+            files: files,
+            headers: headers,
+            decoder: decoder,
+            progress: progress
+        )
+        return response.value
     }
 }

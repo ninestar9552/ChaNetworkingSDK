@@ -180,6 +180,39 @@ final class BaseClientTests {
         #expect(capturedContentType?.contains("multipart/form-data") == true)
     }
 
+    @Test func testMultipartUploadValueOnly() async throws {
+        let (client, key) = createTestClient()
+
+        let mockJSON = #"{"id":1,"name":"Uploaded"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            #expect(request.httpMethod == "POST")
+            #expect(request.url?.absoluteString == "https://api.example.com/upload")
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        let user: MockUser = try await client.uploadMultipart(
+            "/upload",
+            fields: [MultipartField(name: "name", value: "sample")],
+            files: [
+                MultipartFile(
+                    name: "file",
+                    data: Data("file-data".utf8),
+                    fileName: "sample.txt",
+                    mimeType: "text/plain"
+                )
+            ]
+        )
+
+        #expect(user == MockUser(id: 1, name: "Uploaded"))
+    }
+
     // MARK: - Empty Response Test
     @Test func testEmptyPayload() async throws {
         // Given: 클라이언트 생성
