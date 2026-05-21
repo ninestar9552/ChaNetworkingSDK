@@ -8,7 +8,7 @@
 import Foundation
 
 /// Access Token과 Refresh Token 쌍을 나타내는 모델
-public struct TokenPair: Codable {
+public struct TokenPair: Codable, Sendable {
     public let accessToken: String
     public let refreshToken: String
 
