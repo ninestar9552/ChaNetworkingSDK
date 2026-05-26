@@ -23,17 +23,17 @@ open class BearerTokenClient: NetworkClient, EndpointClient {
     /// BearerTokenClient 초기화
     /// - Parameters:
     ///   - baseURL: API Base URL (예: "https://api.example.com")
-    ///   - configuration: URLSession configuration (기본값: .default)
     ///   - tokenStorage: Token 저장소 (기본값: KeychainTokenStorage)
     ///   - tokenRefresher: Token 갱신 로직을 구현한 클로저
+    ///   - session: Alamofire Session (기본값: 새 기본 Session)
     ///   - encoding: 파라미터 인코딩 전략 (기본값: JSONEncoding)
     ///   - errorHandler: 에러 핸들러 (기본값: DefaultNetworkErrorHandler)
     ///   - logging: 로깅 활성화 여부 (기본값: false)
     public init(
         baseURL: String,
-        configuration: URLSessionConfiguration = .default,
         tokenStorage: TokenStorage = KeychainTokenStorage(),
         tokenRefresher: @escaping TokenRefreshHandler,
+        session: Session = Session(),
         encoding: ParameterEncoding = JSONEncoding.default,
         errorHandler: NetworkErrorHandler = DefaultNetworkErrorHandler(),
         logging: Bool = false
@@ -51,14 +51,9 @@ open class BearerTokenClient: NetworkClient, EndpointClient {
         // Interceptor로 결합
         let interceptor = Interceptor(adapter: adapter, retrier: retrier)
 
-        // Session with Interceptor 생성
-        let session = Session(
-            configuration: configuration,
-            interceptor: interceptor
-        )
-
         super.init(
             session: session,
+            requestInterceptor: interceptor,
             encoding: encoding,
             errorHandler: errorHandler,
             logging: logging
@@ -71,16 +66,15 @@ open class BearerTokenClient: NetworkClient, EndpointClient {
     /// 서비스 앱에서는 이 초기화자를 사용하면 `Task` 래핑 코드를 앱에 둘 필요가 없습니다.
     public convenience init(
         baseURL: String,
-        configuration: URLSessionConfiguration = .default,
         tokenStorage: TokenStorage = KeychainTokenStorage(),
         asyncTokenRefresher: @escaping AsyncTokenRefreshHandler,
+        session: Session = Session(),
         encoding: ParameterEncoding = JSONEncoding.default,
         errorHandler: NetworkErrorHandler = DefaultNetworkErrorHandler(),
         logging: Bool = false
     ) {
         self.init(
             baseURL: baseURL,
-            configuration: configuration,
             tokenStorage: tokenStorage,
             tokenRefresher: { refreshToken, completion in
                 let completionBox = UncheckedSendableBox(value: completion)
@@ -93,6 +87,7 @@ open class BearerTokenClient: NetworkClient, EndpointClient {
                     }
                 }
             },
+            session: session,
             encoding: encoding,
             errorHandler: errorHandler,
             logging: logging

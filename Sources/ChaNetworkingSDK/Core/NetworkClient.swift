@@ -12,11 +12,13 @@ import Combine
 // MARK: - Network Client Core
 /// `NetworkClient`는 모든 API 요청의 진입점입니다.
 /// - `session`: Alamofire Session (ex: 인증옵션/인터셉터 포함)
+/// - `requestInterceptor`: 요청 단위 Alamofire Interceptor (인증 클라이언트 내부 사용)
 /// - `encoding`: 디폴트 파라미터 인코딩 전략
 /// - `errorHandler`: 에러 처리 전략 주입 가능 (사용자 커스텀 허용)
 /// - `logging`: 요청/응답 로깅 활성화 여부
 open class NetworkClient {
     public let session: Session
+    private let requestInterceptor: (any RequestInterceptor)?
     public let encoding: ParameterEncoding
     public let errorHandler: NetworkErrorHandler
     public let logging: Bool
@@ -28,6 +30,21 @@ open class NetworkClient {
         logging: Bool = false
     ) {
         self.session = session
+        self.requestInterceptor = nil
+        self.encoding = encoding
+        self.errorHandler = errorHandler
+        self.logging = logging
+    }
+
+    init(
+        session: Session,
+        requestInterceptor: (any RequestInterceptor)?,
+        encoding: ParameterEncoding = JSONEncoding.default,
+        errorHandler: NetworkErrorHandler = DefaultNetworkErrorHandler(),
+        logging: Bool = false
+    ) {
+        self.session = session
+        self.requestInterceptor = requestInterceptor
         self.encoding = encoding
         self.errorHandler = errorHandler
         self.logging = logging
@@ -64,7 +81,8 @@ extension NetworkClient {
             method: httpMethod,
             parameters: parameters,
             encoding: encoding ?? self.encoding,
-            headers: httpHeaders
+            headers: httpHeaders,
+            interceptor: requestInterceptor
         )
 
         return try await dataRequest.serializedResponse(using: self, decoder: decoder)
@@ -98,7 +116,8 @@ extension NetworkClient {
             method: httpMethod,
             parameters: parameters,
             encoder: encoder,
-            headers: httpHeaders
+            headers: httpHeaders,
+            interceptor: requestInterceptor
         )
 
         return try await dataRequest.serializedResponse(using: self, decoder: decoder)
@@ -141,7 +160,8 @@ extension NetworkClient {
             },
             to: url,
             method: method,
-            headers: httpHeaders
+            headers: httpHeaders,
+            interceptor: requestInterceptor
         )
 
         if let progress {
@@ -240,7 +260,8 @@ extension NetworkClient {
             method: httpMethod,
             parameters: parameters,
             encoding: encoding ?? self.encoding,
-            headers: httpHeaders
+            headers: httpHeaders,
+            interceptor: requestInterceptor
         )
 
         return dataRequest.publish(using: self, decoder: decoder)
@@ -274,7 +295,8 @@ extension NetworkClient {
             method: httpMethod,
             parameters: parameters,
             encoder: encoder,
-            headers: httpHeaders
+            headers: httpHeaders,
+            interceptor: requestInterceptor
         )
 
         return dataRequest.publish(using: self, decoder: decoder)

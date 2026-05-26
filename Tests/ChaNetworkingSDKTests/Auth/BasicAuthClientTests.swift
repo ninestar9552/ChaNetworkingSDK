@@ -8,10 +8,14 @@
 import Testing
 import Foundation
 import Alamofire
+import Combine
 @testable import ChaNetworkingSDK
 
 // MARK: - BasicAuthClient Tests
 final class BasicAuthClientTests {
+    private var expectedAuthorizationHeader: String {
+        "Basic " + "test_user:test_password".data(using: .utf8)!.base64EncodedString()
+    }
 
     // Helper: 테스트용 클라이언트 생성
     func createTestClient() -> (client: BasicAuthClient, key: String) {
@@ -23,11 +27,50 @@ final class BasicAuthClientTests {
 
         let client = BasicAuthClient(
             baseURL: "https://api.example.com",
-            configuration: configuration,
             username: "test_user",
             password: "test_password",
+            session: Session(configuration: configuration),
             logging: true)
         return (client, key)
+    }
+
+    @Test func testCustomSessionConfigurationIsUsed() async throws {
+        let key = UUID().uuidString
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        configuration.httpAdditionalHeaders = [
+            "X-Test-ID": key,
+            "X-Custom-Session": "enabled"
+        ]
+
+        let client = BasicAuthClient(
+            baseURL: "https://api.example.com",
+            username: "test_user",
+            password: "test_password",
+            session: Session(configuration: configuration)
+        )
+
+        var capturedCustomHeader: String?
+        var capturedAuthHeader: String?
+        let mockJSON = #"{"id":1,"name":"Test User"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            capturedCustomHeader = request.value(forHTTPHeaderField: "X-Custom-Session")
+            capturedAuthHeader = request.value(forHTTPHeaderField: "Authorization")
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        let _: ApiResponse<MockUser> = try await client.get("/users/me")
+
+        #expect(capturedCustomHeader == "enabled")
+        #expect(capturedAuthHeader == expectedAuthorizationHeader)
     }
 
     // MARK: - Basic Auth Header Test
@@ -54,12 +97,7 @@ final class BasicAuthClientTests {
         let response: ApiResponse<MockUser> = try await client.get("/users/me")
 
         // Then: 정상 응답 및 헤더 검증
-        // "test_user:test_password"를 Base64 인코딩
-        let credentials = "test_user:test_password"
-        let base64Credentials = credentials.data(using: .utf8)!.base64EncodedString()
-        let expectedHeader = "Basic \(base64Credentials)"
-
-        #expect(capturedAuthHeader == expectedHeader)
+        #expect(capturedAuthHeader == expectedAuthorizationHeader)
         #expect(response.value.id == 1)
         #expect(response.httpResponse.statusCode == 200)
     }
@@ -86,10 +124,92 @@ final class BasicAuthClientTests {
         let user: MockUser = try await client.get("/users/me")
 
         // Then: 값 검증 + 인증 헤더 검증
-        let expectedHeader = "Basic " + "test_user:test_password".data(using: .utf8)!.base64EncodedString()
         #expect(user.id == 1)
         #expect(user.name == "Test User")
-        #expect(capturedAuthHeader == expectedHeader)
+        #expect(capturedAuthHeader == expectedAuthorizationHeader)
+    }
+
+    @Test func testEncodableBodyAddsBasicAuthHeader() async throws {
+        let (client, key) = createTestClient()
+
+        struct CreateUserRequest: Encodable, Sendable {
+            let name: String
+        }
+
+        var capturedAuthHeader: String?
+        let mockJSON = #"{"id":1,"name":"Test User"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            capturedAuthHeader = request.value(forHTTPHeaderField: "Authorization")
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        let _: ApiResponse<MockUser> = try await client.post(
+            "/users",
+            body: CreateUserRequest(name: "Test User")
+        )
+
+        #expect(capturedAuthHeader == expectedAuthorizationHeader)
+    }
+
+    @Test func testMultipartUploadAddsBasicAuthHeader() async throws {
+        let (client, key) = createTestClient()
+
+        var capturedAuthHeader: String?
+        let mockJSON = #"{"id":1,"name":"Uploaded"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            capturedAuthHeader = request.value(forHTTPHeaderField: "Authorization")
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        let _: ApiResponse<MockUser> = try await client.uploadMultipart(
+            "/upload",
+            fields: [MultipartField(name: "name", value: "sample")]
+        )
+
+        #expect(capturedAuthHeader == expectedAuthorizationHeader)
+    }
+
+    @Test func testPublisherAddsBasicAuthHeader() async throws {
+        let (client, key) = createTestClient()
+
+        var capturedAuthHeader: String?
+        let mockJSON = #"{"id":1,"name":"Test User"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            capturedAuthHeader = request.value(forHTTPHeaderField: "Authorization")
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        let publisher: AnyPublisher<ApiResponse<MockUser>, Error> = client.getPublisher("/users/me")
+        var didReceiveValue = false
+
+        for try await response in publisher.values {
+            didReceiveValue = true
+            #expect(response.value.id == 1)
+        }
+
+        #expect(didReceiveValue)
+        #expect(capturedAuthHeader == expectedAuthorizationHeader)
     }
 
     // MARK: - Convenience Methods Test

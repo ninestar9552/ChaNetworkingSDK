@@ -18,20 +18,18 @@ open class BaseClient: NetworkClient, EndpointClient {
     /// BaseClient 초기화
     /// - Parameters:
     ///   - baseURL: API Base URL (예: "https://api.example.com")
-    ///   - configuration: URLSession configuration (기본값: .default)
+    ///   - session: Alamofire Session (기본값: 새 기본 Session)
     ///   - encoding: 파라미터 인코딩 전략 (기본값: JSONEncoding)
     ///   - errorHandler: 에러 핸들러 (기본값: DefaultNetworkErrorHandler)
     ///   - logging: 로깅 활성화 여부 (기본값: false)
     public init(
         baseURL: String,
-        configuration: URLSessionConfiguration = .default,
+        session: Session = Session(),
         encoding: ParameterEncoding = JSONEncoding.default,
         errorHandler: NetworkErrorHandler = DefaultNetworkErrorHandler(),
         logging: Bool = false
     ) {
         self.baseURL = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
-
-        let session = Session(configuration: configuration)
 
         super.init(
             session: session,

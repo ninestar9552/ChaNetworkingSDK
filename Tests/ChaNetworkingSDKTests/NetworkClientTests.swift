@@ -199,12 +199,16 @@ final class NetworkClientTests {
         }
 
         let publisher: AnyPublisher<ApiResponse<MockUser>, Error> = client.responseDataPublisher(.get, "/users")
+        var didReceiveValue = false
 
         for try await response in publisher.values {
+            didReceiveValue = true
             #expect(response.value == MockUser(id: 1, name: "Soo"))
             #expect(response.data == mockJSON)
             #expect(response.httpResponse.statusCode == 200)
         }
+
+        #expect(didReceiveValue)
     }
 
     // MARK: - Error Handling Publisher Test
@@ -228,6 +232,7 @@ final class NetworkClientTests {
             for try await _ in publisher.values {
                 Issue.record("Expected error was not thrown")
             }
+            Issue.record("Expected error was not thrown")
         } catch let error as NetworkError {
             switch error {
             case .serverError(let code, let message):

@@ -23,10 +23,44 @@ final class BaseClientTests {
 
         let client = BaseClient(
             baseURL: "https://api.example.com",
-            configuration: configuration,
+            session: Session(configuration: configuration),
             logging: true
         )
         return (client, key)
+    }
+
+    @Test func testCustomSessionConfigurationIsUsed() async throws {
+        let key = UUID().uuidString
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        configuration.httpAdditionalHeaders = [
+            "X-Test-ID": key,
+            "X-Custom-Session": "enabled"
+        ]
+
+        let client = BaseClient(
+            baseURL: "https://api.example.com",
+            session: Session(configuration: configuration)
+        )
+
+        var capturedCustomHeader: String?
+        let mockJSON = #"{"id":1,"name":"Test User"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            capturedCustomHeader = request.value(forHTTPHeaderField: "X-Custom-Session")
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        let _: ApiResponse<MockUser> = try await client.get("/users/me")
+
+        #expect(capturedCustomHeader == "enabled")
     }
 
     // MARK: - Basic Request Test

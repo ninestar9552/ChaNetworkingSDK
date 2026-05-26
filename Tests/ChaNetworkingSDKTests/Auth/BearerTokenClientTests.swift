@@ -8,6 +8,7 @@
 import Testing
 import Foundation
 import Alamofire
+import Combine
 @testable import ChaNetworkingSDK
 
 // MARK: - BearerTokenClient Tests
@@ -35,13 +36,99 @@ final class BearerTokenClientTests {
         // BearerTokenClient 생성 with mock configuration
         let client = BearerTokenClient(
             baseURL: "https://api.example.com",
-            configuration: configuration,
             tokenStorage: tokenStorage,
             tokenRefresher: tokenRefresher,
+            session: Session(configuration: configuration),
             logging: true
         )
 
         return (client, key, tokenStorage)
+    }
+
+    @Test func testCustomSessionConfigurationIsUsed() async throws {
+        let key = UUID().uuidString
+        let tokenStorage = MockTokenStorage()
+        try tokenStorage.saveAccessToken("test_access_token")
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        configuration.httpAdditionalHeaders = [
+            "X-Test-ID": key,
+            "X-Custom-Session": "enabled"
+        ]
+
+        let client = BearerTokenClient(
+            baseURL: "https://api.example.com",
+            tokenStorage: tokenStorage,
+            tokenRefresher: { _, completion in
+                completion(.success(TokenPair(accessToken: "access", refreshToken: "refresh")))
+            },
+            session: Session(configuration: configuration)
+        )
+
+        var capturedCustomHeader: String?
+        var capturedAuthHeader: String?
+        let mockJSON = #"{"id":1,"name":"Test User"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            capturedCustomHeader = request.value(forHTTPHeaderField: "X-Custom-Session")
+            capturedAuthHeader = request.value(forHTTPHeaderField: "Authorization")
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        let _: ApiResponse<MockUser> = try await client.get("/users/me")
+
+        #expect(capturedCustomHeader == "enabled")
+        #expect(capturedAuthHeader == "Bearer test_access_token")
+    }
+
+    @Test func testAsyncRefreshInitializerUsesCustomSession() async throws {
+        let key = UUID().uuidString
+        let tokenStorage = MockTokenStorage()
+        try tokenStorage.saveAccessToken("test_access_token")
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        configuration.httpAdditionalHeaders = [
+            "X-Test-ID": key,
+            "X-Custom-Session": "enabled"
+        ]
+
+        let client = BearerTokenClient(
+            baseURL: "https://api.example.com",
+            tokenStorage: tokenStorage,
+            asyncTokenRefresher: { _ in
+                TokenPair(accessToken: "access", refreshToken: "refresh")
+            },
+            session: Session(configuration: configuration)
+        )
+
+        var capturedCustomHeader: String?
+        var capturedAuthHeader: String?
+        let mockJSON = #"{"id":1,"name":"Test User"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            capturedCustomHeader = request.value(forHTTPHeaderField: "X-Custom-Session")
+            capturedAuthHeader = request.value(forHTTPHeaderField: "Authorization")
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        let _: ApiResponse<MockUser> = try await client.get("/users/me")
+
+        #expect(capturedCustomHeader == "enabled")
+        #expect(capturedAuthHeader == "Bearer test_access_token")
     }
 
     func createAsyncRefreshTestClient() -> (client: BearerTokenClient, key: String, storage: MockTokenStorage) {
@@ -54,12 +141,12 @@ final class BearerTokenClientTests {
 
         let client = BearerTokenClient(
             baseURL: "https://api.example.com",
-            configuration: configuration,
             tokenStorage: tokenStorage,
             asyncTokenRefresher: { refreshToken in
                 #expect(refreshToken == "valid_refresh_token")
                 return TokenPair(accessToken: "async_access_token", refreshToken: "async_refresh_token")
             },
+            session: Session(configuration: configuration),
             logging: true
         )
 
@@ -250,6 +337,138 @@ final class BearerTokenClientTests {
         // Then: 값 검증 + 인증 헤더 검증
         #expect(user.id == 1)
         #expect(user.name == "Test User")
+        #expect(capturedAuthHeader == "Bearer test_access_token")
+    }
+
+    @Test func testEncodableBodyAddsAuthorizationHeader() async throws {
+        let (client, key, tokenStorage) = createTestClient()
+        try tokenStorage.saveAccessToken("test_access_token")
+
+        struct CreateUserRequest: Encodable, Sendable {
+            let name: String
+        }
+
+        var capturedAuthHeader: String?
+        let mockJSON = #"{"id":1,"name":"Test User"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            capturedAuthHeader = request.value(forHTTPHeaderField: "Authorization")
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        let _: ApiResponse<MockUser> = try await client.post(
+            "/users",
+            body: CreateUserRequest(name: "Test User")
+        )
+
+        #expect(capturedAuthHeader == "Bearer test_access_token")
+    }
+
+    @Test func testMultipartUploadAddsAuthorizationHeader() async throws {
+        let (client, key, tokenStorage) = createTestClient()
+        try tokenStorage.saveAccessToken("test_access_token")
+
+        var capturedAuthHeader: String?
+        let mockJSON = #"{"id":1,"name":"Uploaded"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            capturedAuthHeader = request.value(forHTTPHeaderField: "Authorization")
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        let _: ApiResponse<MockUser> = try await client.uploadMultipart(
+            "/upload",
+            fields: [MultipartField(name: "name", value: "sample")]
+        )
+
+        #expect(capturedAuthHeader == "Bearer test_access_token")
+    }
+
+    @Test func testPublisherAddsAuthorizationHeader() async throws {
+        let (client, key, tokenStorage) = createTestClient()
+        try tokenStorage.saveAccessToken("test_access_token")
+
+        var capturedAuthHeader: String?
+        let mockJSON = #"{"id":1,"name":"Test User"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            capturedAuthHeader = request.value(forHTTPHeaderField: "Authorization")
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        let publisher: AnyPublisher<ApiResponse<MockUser>, Error> = client.getPublisher("/users/me")
+        var didReceiveValue = false
+
+        for try await response in publisher.values {
+            didReceiveValue = true
+            #expect(response.value.id == 1)
+        }
+
+        #expect(didReceiveValue)
+        #expect(capturedAuthHeader == "Bearer test_access_token")
+    }
+
+    @Test func testSessionAndBearerInterceptorsAreCombined() async throws {
+        let key = UUID().uuidString
+        let tokenStorage = MockTokenStorage()
+        try tokenStorage.saveAccessToken("test_access_token")
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        configuration.httpAdditionalHeaders = ["X-Test-ID": key]
+
+        let sessionAdapter = Adapter { urlRequest, _, completion in
+            var urlRequest = urlRequest
+            urlRequest.setValue("enabled", forHTTPHeaderField: "X-Session-Adapter")
+            completion(.success(urlRequest))
+        }
+
+        let client = BearerTokenClient(
+            baseURL: "https://api.example.com",
+            tokenStorage: tokenStorage,
+            tokenRefresher: { _, completion in
+                completion(.success(TokenPair(accessToken: "access", refreshToken: "refresh")))
+            },
+            session: Session(configuration: configuration, interceptor: sessionAdapter)
+        )
+
+        var capturedSessionHeader: String?
+        var capturedAuthHeader: String?
+        let mockJSON = #"{"id":1,"name":"Test User"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            capturedSessionHeader = request.value(forHTTPHeaderField: "X-Session-Adapter")
+            capturedAuthHeader = request.value(forHTTPHeaderField: "Authorization")
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        let _: ApiResponse<MockUser> = try await client.get("/users/me")
+
+        #expect(capturedSessionHeader == "enabled")
         #expect(capturedAuthHeader == "Bearer test_access_token")
     }
 

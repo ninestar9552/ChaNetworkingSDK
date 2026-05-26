@@ -17,17 +17,17 @@ open class BasicAuthClient: NetworkClient, EndpointClient {
     /// BasicAuthClient 초기화
     /// - Parameters:
     ///   - baseURL: API Base URL (예: "https://api.example.com")
-    ///   - configuration: URLSession configuration (기본값: .default)
     ///   - username: 사용자 이름
     ///   - password: 비밀번호
+    ///   - session: Alamofire Session (기본값: 새 기본 Session)
     ///   - encoding: 파라미터 인코딩 전략 (기본값: JSONEncoding)
     ///   - errorHandler: 에러 핸들러 (기본값: DefaultNetworkErrorHandler)
     ///   - logging: 로깅 활성화 여부 (기본값: false)
     public init(
         baseURL: String,
-        configuration: URLSessionConfiguration = .default,
         username: String,
         password: String,
+        session: Session = Session(),
         encoding: ParameterEncoding = JSONEncoding.default,
         errorHandler: NetworkErrorHandler = DefaultNetworkErrorHandler(),
         logging: Bool = false
@@ -37,14 +37,9 @@ open class BasicAuthClient: NetworkClient, EndpointClient {
         // BasicAuthAdapter 생성
         let adapter = BasicAuthAdapter(username: username, password: password)
 
-        // Session with Interceptor 생성
-        let session = Session(
-            configuration: configuration,
-            interceptor: adapter
-        )
-
         super.init(
             session: session,
+            requestInterceptor: adapter,
             encoding: encoding,
             errorHandler: errorHandler,
             logging: logging
