@@ -11,12 +11,12 @@ import Alamofire
 @available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
 extension EndpointClient where Self: NetworkClient {
 
-    /// API 요청 (async/await) - 상대 경로 자동 결합
+    /// API 요청 (async/await) - `Parameters` 딕셔너리와 `ParameterEncoding` 사용
     /// - Parameters:
     ///   - httpMethod: HTTP 메서드
     ///   - path: API 경로 (예: "/users/me")
-    ///   - parameters: 요청 파라미터
-    ///   - encoding: 파라미터 인코딩 (기본값: 클라이언트 설정)
+    ///   - parameters: 요청 파라미터 딕셔너리
+    ///   - encoding: 파라미터 인코딩 (nil이면 클라이언트 기본 인코딩 사용)
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
     public func request<T: Decodable>(
@@ -41,12 +41,14 @@ extension EndpointClient where Self: NetworkClient {
     /// GET 요청 - 리소스 조회
     /// - Parameters:
     ///   - path: API 경로 (예: "/users/me")
-    ///   - parameters: Query parameters (URL에 추가됨)
+    ///   - parameters: 요청 파라미터 딕셔너리
+    ///   - encoding: 파라미터 인코딩 (기본: URL 인코딩)
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
     public func get<T: Decodable>(
         _ path: String,
         parameters: Parameters? = nil,
+        encoding: ParameterEncoding = URLEncoding.default,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) async throws -> ApiResponse<T> {
@@ -54,7 +56,7 @@ extension EndpointClient where Self: NetworkClient {
             .get,
             path,
             parameters: parameters,
-            encoding: URLEncoding.default,
+            encoding: encoding,
             headers: headers,
             decoder: decoder
         )
@@ -63,7 +65,7 @@ extension EndpointClient where Self: NetworkClient {
     /// POST 요청 - 리소스 생성
     /// - Parameters:
     ///   - path: API 경로
-    ///   - parameters: Request body
+    ///   - parameters: 요청 파라미터 딕셔너리
     ///   - encoding: 파라미터 인코딩 (기본: JSON)
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
@@ -87,7 +89,7 @@ extension EndpointClient where Self: NetworkClient {
     /// PUT 요청 - 리소스 전체 수정
     /// - Parameters:
     ///   - path: API 경로
-    ///   - parameters: Request body
+    ///   - parameters: 요청 파라미터 딕셔너리
     ///   - encoding: 파라미터 인코딩 (기본: JSON)
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
@@ -111,7 +113,7 @@ extension EndpointClient where Self: NetworkClient {
     /// PATCH 요청 - 리소스 부분 수정
     /// - Parameters:
     ///   - path: API 경로
-    ///   - parameters: Request body
+    ///   - parameters: 요청 파라미터 딕셔너리
     ///   - encoding: 파라미터 인코딩 (기본: JSON)
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
@@ -135,12 +137,14 @@ extension EndpointClient where Self: NetworkClient {
     /// DELETE 요청 - 리소스 삭제
     /// - Parameters:
     ///   - path: API 경로
-    ///   - parameters: Query parameters (선택)
+    ///   - parameters: 요청 파라미터 딕셔너리
+    ///   - encoding: 파라미터 인코딩 (기본: URL 인코딩)
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
     public func delete<T: Decodable>(
         _ path: String,
         parameters: Parameters? = nil,
+        encoding: ParameterEncoding = URLEncoding.default,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) async throws -> ApiResponse<T> {
@@ -148,7 +152,7 @@ extension EndpointClient where Self: NetworkClient {
             .delete,
             path,
             parameters: parameters,
-            encoding: URLEncoding.default,
+            encoding: encoding,
             headers: headers,
             decoder: decoder
         )
@@ -158,116 +162,148 @@ extension EndpointClient where Self: NetworkClient {
 @available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
 extension EndpointClient where Self: NetworkClient {
 
-    /// GET 요청 - Encodable 쿼리 파라미터
+    /// API 요청 (async/await) - `Encodable` 파라미터와 `ParameterEncoder` 사용
+    /// - Parameters:
+    ///   - httpMethod: HTTP 메서드
+    ///   - path: API 경로 (예: "/users/me")
+    ///   - parameters: Encodable 요청 모델
+    ///   - encoder: 파라미터 인코더
+    ///   - headers: 추가 헤더
+    ///   - decoder: JSON 디코더
+    public func request<T: Decodable, RequestParameters: Encodable & Sendable>(
+        _ httpMethod: Alamofire.HTTPMethod,
+        _ path: String,
+        parameters: RequestParameters?,
+        encoder: ParameterEncoder,
+        headers: [String: String]? = nil,
+        decoder: JSONDecoder = JSONDecoder()
+    ) async throws -> ApiResponse<T> {
+        let fullURL = buildURL(path: path)
+        return try await responseData(
+            httpMethod,
+            fullURL,
+            parameters: parameters,
+            encoder: encoder,
+            headers: headers,
+            decoder: decoder
+        )
+    }
+
+    /// GET 요청 - Encodable 요청 모델
     /// - Parameters:
     ///   - path: API 경로 (예: "/users")
-    ///   - query: Encodable 쿼리 파라미터 (URL에 추가됨)
+    ///   - query: Encodable 요청 모델
+    ///   - encoder: 파라미터 인코더 (기본: URL form)
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
     public func get<T: Decodable, Query: Encodable & Sendable>(
         _ path: String,
         query: Query? = nil,
+        encoder: ParameterEncoder = URLEncodedFormParameterEncoder.default,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) async throws -> ApiResponse<T> {
-        let fullURL = buildURL(path: path)
-        return try await responseData(
+        return try await request(
             .get,
-            fullURL,
+            path,
             parameters: query,
-            encoder: URLEncodedFormParameterEncoder.default,
+            encoder: encoder,
             headers: headers,
             decoder: decoder
         )
     }
 
-    /// POST 요청 - Encodable body
+    /// POST 요청 - Encodable 요청 모델
     /// - Parameters:
     ///   - path: API 경로
-    ///   - body: Encodable request body
+    ///   - body: Encodable 요청 모델
+    ///   - encoder: 파라미터 인코더 (기본: JSON)
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
     public func post<T: Decodable, Body: Encodable & Sendable>(
         _ path: String,
         body: Body? = nil,
+        encoder: ParameterEncoder = JSONParameterEncoder.default,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) async throws -> ApiResponse<T> {
-        let fullURL = buildURL(path: path)
-        return try await responseData(
+        return try await request(
             .post,
-            fullURL,
+            path,
             parameters: body,
-            encoder: JSONParameterEncoder.default,
+            encoder: encoder,
             headers: headers,
             decoder: decoder
         )
     }
 
-    /// PUT 요청 - Encodable body
+    /// PUT 요청 - Encodable 요청 모델
     /// - Parameters:
     ///   - path: API 경로
-    ///   - body: Encodable request body
+    ///   - body: Encodable 요청 모델
+    ///   - encoder: 파라미터 인코더 (기본: JSON)
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
     public func put<T: Decodable, Body: Encodable & Sendable>(
         _ path: String,
         body: Body? = nil,
+        encoder: ParameterEncoder = JSONParameterEncoder.default,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) async throws -> ApiResponse<T> {
-        let fullURL = buildURL(path: path)
-        return try await responseData(
+        return try await request(
             .put,
-            fullURL,
+            path,
             parameters: body,
-            encoder: JSONParameterEncoder.default,
+            encoder: encoder,
             headers: headers,
             decoder: decoder
         )
     }
 
-    /// PATCH 요청 - Encodable body
+    /// PATCH 요청 - Encodable 요청 모델
     /// - Parameters:
     ///   - path: API 경로
-    ///   - body: Encodable request body
+    ///   - body: Encodable 요청 모델
+    ///   - encoder: 파라미터 인코더 (기본: JSON)
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
     public func patch<T: Decodable, Body: Encodable & Sendable>(
         _ path: String,
         body: Body? = nil,
+        encoder: ParameterEncoder = JSONParameterEncoder.default,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) async throws -> ApiResponse<T> {
-        let fullURL = buildURL(path: path)
-        return try await responseData(
+        return try await request(
             .patch,
-            fullURL,
+            path,
             parameters: body,
-            encoder: JSONParameterEncoder.default,
+            encoder: encoder,
             headers: headers,
             decoder: decoder
         )
     }
 
-    /// DELETE 요청 - Encodable 쿼리 파라미터
+    /// DELETE 요청 - Encodable 요청 모델
     /// - Parameters:
     ///   - path: API 경로
-    ///   - query: Encodable 쿼리 파라미터 (URL에 추가됨)
+    ///   - query: Encodable 요청 모델
+    ///   - encoder: 파라미터 인코더 (기본: URL form)
     ///   - headers: 추가 헤더
     ///   - decoder: JSON 디코더
     public func delete<T: Decodable, Query: Encodable & Sendable>(
         _ path: String,
         query: Query? = nil,
+        encoder: ParameterEncoder = URLEncodedFormParameterEncoder.default,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) async throws -> ApiResponse<T> {
-        let fullURL = buildURL(path: path)
-        return try await responseData(
+        return try await request(
             .delete,
-            fullURL,
+            path,
             parameters: query,
-            encoder: URLEncodedFormParameterEncoder.default,
+            encoder: encoder,
             headers: headers,
             decoder: decoder
         )

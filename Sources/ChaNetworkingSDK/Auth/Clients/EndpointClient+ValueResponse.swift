@@ -24,10 +24,11 @@ extension EndpointClient where Self: NetworkClient {
     public func get<T: Decodable>(
         _ path: String,
         parameters: Parameters? = nil,
+        encoding: ParameterEncoding = URLEncoding.default,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) async throws -> T {
-        let response: ApiResponse<T> = try await get(path, parameters: parameters, headers: headers, decoder: decoder)
+        let response: ApiResponse<T> = try await get(path, parameters: parameters, encoding: encoding, headers: headers, decoder: decoder)
         return response.value
     }
 
@@ -67,10 +68,11 @@ extension EndpointClient where Self: NetworkClient {
     public func delete<T: Decodable>(
         _ path: String,
         parameters: Parameters? = nil,
+        encoding: ParameterEncoding = URLEncoding.default,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) async throws -> T {
-        let response: ApiResponse<T> = try await delete(path, parameters: parameters, headers: headers, decoder: decoder)
+        let response: ApiResponse<T> = try await delete(path, parameters: parameters, encoding: encoding, headers: headers, decoder: decoder)
         return response.value
     }
 }
@@ -81,50 +83,55 @@ extension EndpointClient where Self: NetworkClient {
     public func get<T: Decodable, Query: Encodable & Sendable>(
         _ path: String,
         query: Query? = nil,
+        encoder: ParameterEncoder = URLEncodedFormParameterEncoder.default,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) async throws -> T {
-        let response: ApiResponse<T> = try await get(path, query: query, headers: headers, decoder: decoder)
+        let response: ApiResponse<T> = try await get(path, query: query, encoder: encoder, headers: headers, decoder: decoder)
         return response.value
     }
 
     public func post<T: Decodable, Body: Encodable & Sendable>(
         _ path: String,
         body: Body? = nil,
+        encoder: ParameterEncoder = JSONParameterEncoder.default,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) async throws -> T {
-        let response: ApiResponse<T> = try await post(path, body: body, headers: headers, decoder: decoder)
+        let response: ApiResponse<T> = try await post(path, body: body, encoder: encoder, headers: headers, decoder: decoder)
         return response.value
     }
 
     public func put<T: Decodable, Body: Encodable & Sendable>(
         _ path: String,
         body: Body? = nil,
+        encoder: ParameterEncoder = JSONParameterEncoder.default,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) async throws -> T {
-        let response: ApiResponse<T> = try await put(path, body: body, headers: headers, decoder: decoder)
+        let response: ApiResponse<T> = try await put(path, body: body, encoder: encoder, headers: headers, decoder: decoder)
         return response.value
     }
 
     public func patch<T: Decodable, Body: Encodable & Sendable>(
         _ path: String,
         body: Body? = nil,
+        encoder: ParameterEncoder = JSONParameterEncoder.default,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) async throws -> T {
-        let response: ApiResponse<T> = try await patch(path, body: body, headers: headers, decoder: decoder)
+        let response: ApiResponse<T> = try await patch(path, body: body, encoder: encoder, headers: headers, decoder: decoder)
         return response.value
     }
 
     public func delete<T: Decodable, Query: Encodable & Sendable>(
         _ path: String,
         query: Query? = nil,
+        encoder: ParameterEncoder = URLEncodedFormParameterEncoder.default,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) async throws -> T {
-        let response: ApiResponse<T> = try await delete(path, query: query, headers: headers, decoder: decoder)
+        let response: ApiResponse<T> = try await delete(path, query: query, encoder: encoder, headers: headers, decoder: decoder)
         return response.value
     }
 }

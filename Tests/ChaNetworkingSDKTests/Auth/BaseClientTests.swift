@@ -397,6 +397,88 @@ final class BaseClientTests {
         #expect(patchUser.id == 1)
     }
 
+    @Test func testParametersConvenienceMethodUsesCustomEncoding() async throws {
+        // Given: 클라이언트 생성
+        let (client, key) = createTestClient()
+
+        var capturedBody: [String: Any]?
+        let mockJSON = #"{"id":1,"name":"Test"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            let bodyData: Data?
+            if let body = request.httpBody {
+                bodyData = body
+            } else if let bodyStream = request.httpBodyStream {
+                bodyData = Data(reading: bodyStream)
+            } else {
+                bodyData = nil
+            }
+            if let bodyData {
+                capturedBody = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any]
+            }
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        // When: Parameters 기반 DELETE convenience 메서드에서 JSONEncoding 사용
+        let response: ApiResponse<MockUser> = try await client.delete(
+            "/search",
+            parameters: ["keyword": "swift", "page": 4],
+            encoding: JSONEncoding.default
+        )
+
+        // Then: custom encoding이 적용되어 body에 JSON이 포함되어야 함
+        #expect(response.value.id == 1)
+        #expect(capturedBody?["keyword"] as? String == "swift")
+        #expect(capturedBody?["page"] as? Int == 4)
+    }
+
+    @Test func testValueOnlyParametersConvenienceMethodUsesCustomEncoding() async throws {
+        // Given: 클라이언트 생성
+        let (client, key) = createTestClient()
+
+        var capturedBody: [String: Any]?
+        let mockJSON = #"{"id":1,"name":"Test"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            let bodyData: Data?
+            if let body = request.httpBody {
+                bodyData = body
+            } else if let bodyStream = request.httpBodyStream {
+                bodyData = Data(reading: bodyStream)
+            } else {
+                bodyData = nil
+            }
+            if let bodyData {
+                capturedBody = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any]
+            }
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        // When: value-only DELETE convenience 메서드에서 JSONEncoding 사용
+        let user: MockUser = try await client.delete(
+            "/search",
+            parameters: ["keyword": "swift", "page": 5],
+            encoding: JSONEncoding.default
+        )
+
+        // Then: custom encoding이 적용되어 body에 JSON이 포함되어야 함
+        #expect(user.id == 1)
+        #expect(capturedBody?["keyword"] as? String == "swift")
+        #expect(capturedBody?["page"] as? Int == 5)
+    }
+
     @Test func testValueOnlyEncodableQuery() async throws {
         // Given: 클라이언트 생성
         let (client, key) = createTestClient()
@@ -527,6 +609,137 @@ final class BaseClientTests {
         #expect(capturedURL?.contains("keyword=test") == true)
         #expect(capturedURL?.contains("page=1") == true)
         #expect(capturedURL?.contains("limit=20") == true)
+    }
+
+    @Test func testEncodableRequestUsesCustomEncoder() async throws {
+        // Given: 클라이언트 생성
+        let (client, key) = createTestClient()
+
+        struct SearchQuery: Encodable {
+            let keyword: String
+            let page: Int
+        }
+
+        var capturedURL: String?
+        var capturedBody: Data?
+        let mockJSON = #"{"id":1,"name":"Test"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            capturedURL = request.url?.absoluteString
+            if let body = request.httpBody {
+                capturedBody = body
+            } else if let bodyStream = request.httpBodyStream {
+                capturedBody = Data(reading: bodyStream)
+            }
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        // When: POST 요청에 Encodable 파라미터를 쿼리스트링으로 인코딩
+        let query = SearchQuery(keyword: "swift", page: 2)
+        let _: ApiResponse<MockUser> = try await client.request(
+            .post,
+            "/search",
+            parameters: query,
+            encoder: URLEncodedFormParameterEncoder(destination: .queryString)
+        )
+
+        // Then: 커스텀 인코더가 적용되어 body 대신 URL 쿼리로 전송되어야 함
+        #expect(capturedURL?.contains("keyword=swift") == true)
+        #expect(capturedURL?.contains("page=2") == true)
+        #expect(capturedBody == nil || capturedBody?.isEmpty == true)
+    }
+
+    @Test func testEncodableConvenienceMethodUsesCustomEncoder() async throws {
+        // Given: 클라이언트 생성
+        let (client, key) = createTestClient()
+
+        struct SearchQuery: Encodable {
+            let keyword: String
+            let page: Int
+        }
+
+        var capturedURL: String?
+        var capturedBody: Data?
+        let mockJSON = #"{"id":1,"name":"Test"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            capturedURL = request.url?.absoluteString
+            if let body = request.httpBody {
+                capturedBody = body
+            } else if let bodyStream = request.httpBodyStream {
+                capturedBody = Data(reading: bodyStream)
+            }
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        // When: POST convenience 메서드에서 Encodable 모델을 쿼리스트링으로 인코딩
+        let query = SearchQuery(keyword: "swift", page: 3)
+        let _: ApiResponse<MockUser> = try await client.post(
+            "/search",
+            body: query,
+            encoder: URLEncodedFormParameterEncoder(destination: .queryString)
+        )
+
+        // Then: convenience 메서드에서도 커스텀 인코더가 적용되어야 함
+        #expect(capturedURL?.contains("keyword=swift") == true)
+        #expect(capturedURL?.contains("page=3") == true)
+        #expect(capturedBody == nil || capturedBody?.isEmpty == true)
+    }
+
+    @Test func testValueOnlyEncodableConvenienceMethodUsesCustomEncoder() async throws {
+        // Given: 클라이언트 생성
+        let (client, key) = createTestClient()
+
+        struct SearchQuery: Encodable {
+            let keyword: String
+            let page: Int
+        }
+
+        var capturedURL: String?
+        var capturedBody: Data?
+        let mockJSON = #"{"id":1,"name":"Test"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            capturedURL = request.url?.absoluteString
+            if let body = request.httpBody {
+                capturedBody = body
+            } else if let bodyStream = request.httpBodyStream {
+                capturedBody = Data(reading: bodyStream)
+            }
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, mockJSON)
+        }
+
+        // When: value-only POST convenience 메서드에서 Encodable 모델을 쿼리스트링으로 인코딩
+        let query = SearchQuery(keyword: "swift", page: 6)
+        let user: MockUser = try await client.post(
+            "/search",
+            body: query,
+            encoder: URLEncodedFormParameterEncoder(destination: .queryString)
+        )
+
+        // Then: value-only convenience 메서드에서도 커스텀 인코더가 적용되어야 함
+        #expect(user.id == 1)
+        #expect(capturedURL?.contains("keyword=swift") == true)
+        #expect(capturedURL?.contains("page=6") == true)
+        #expect(capturedBody == nil || capturedBody?.isEmpty == true)
     }
 
     // MARK: - Encodable Body Test
