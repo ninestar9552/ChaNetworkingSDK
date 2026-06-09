@@ -127,7 +127,7 @@ extension EndpointClient where Self: NetworkClient {
     /// GET 요청 Publisher - Encodable 쿼리 파라미터
     public func getPublisher<T: Decodable, Query: Encodable & Sendable>(
         _ path: String,
-        query: Query? = nil,
+        query: Query?,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) -> AnyPublisher<ApiResponse<T>, Error> {
@@ -145,7 +145,7 @@ extension EndpointClient where Self: NetworkClient {
     /// POST 요청 Publisher - Encodable body
     public func postPublisher<T: Decodable, Body: Encodable & Sendable>(
         _ path: String,
-        body: Body? = nil,
+        body: Body?,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) -> AnyPublisher<ApiResponse<T>, Error> {
@@ -163,7 +163,7 @@ extension EndpointClient where Self: NetworkClient {
     /// PUT 요청 Publisher - Encodable body
     public func putPublisher<T: Decodable, Body: Encodable & Sendable>(
         _ path: String,
-        body: Body? = nil,
+        body: Body?,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) -> AnyPublisher<ApiResponse<T>, Error> {
@@ -181,7 +181,7 @@ extension EndpointClient where Self: NetworkClient {
     /// PATCH 요청 Publisher - Encodable body
     public func patchPublisher<T: Decodable, Body: Encodable & Sendable>(
         _ path: String,
-        body: Body? = nil,
+        body: Body?,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) -> AnyPublisher<ApiResponse<T>, Error> {
@@ -199,7 +199,7 @@ extension EndpointClient where Self: NetworkClient {
     /// DELETE 요청 Publisher - Encodable 쿼리 파라미터
     public func deletePublisher<T: Decodable, Query: Encodable & Sendable>(
         _ path: String,
-        query: Query? = nil,
+        query: Query?,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
     ) -> AnyPublisher<ApiResponse<T>, Error> {

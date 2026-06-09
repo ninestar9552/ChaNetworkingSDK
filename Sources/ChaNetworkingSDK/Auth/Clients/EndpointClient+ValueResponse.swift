@@ -82,7 +82,7 @@ extension EndpointClient where Self: NetworkClient {
 
     public func get<T: Decodable, Query: Encodable & Sendable>(
         _ path: String,
-        query: Query? = nil,
+        query: Query?,
         encoder: ParameterEncoder = URLEncodedFormParameterEncoder.default,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
@@ -93,7 +93,7 @@ extension EndpointClient where Self: NetworkClient {
 
     public func post<T: Decodable, Body: Encodable & Sendable>(
         _ path: String,
-        body: Body? = nil,
+        body: Body?,
         encoder: ParameterEncoder = JSONParameterEncoder.default,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
@@ -104,7 +104,7 @@ extension EndpointClient where Self: NetworkClient {
 
     public func put<T: Decodable, Body: Encodable & Sendable>(
         _ path: String,
-        body: Body? = nil,
+        body: Body?,
         encoder: ParameterEncoder = JSONParameterEncoder.default,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
@@ -115,7 +115,7 @@ extension EndpointClient where Self: NetworkClient {
 
     public func patch<T: Decodable, Body: Encodable & Sendable>(
         _ path: String,
-        body: Body? = nil,
+        body: Body?,
         encoder: ParameterEncoder = JSONParameterEncoder.default,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
@@ -126,7 +126,7 @@ extension EndpointClient where Self: NetworkClient {
 
     public func delete<T: Decodable, Query: Encodable & Sendable>(
         _ path: String,
-        query: Query? = nil,
+        query: Query?,
         encoder: ParameterEncoder = URLEncodedFormParameterEncoder.default,
         headers: [String: String]? = nil,
         decoder: JSONDecoder = JSONDecoder()
