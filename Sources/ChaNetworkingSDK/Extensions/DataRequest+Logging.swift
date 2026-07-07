@@ -8,16 +8,28 @@
 import Foundation
 import Alamofire
 
+internal struct MultipartLogPayload: Sendable {
+    let fields: [MultipartField]
+    let files: [MultipartFile]
+}
+
 extension DataRequest {
-    internal func log(dataResponse: DataResponse<Data, AFError>, logging: Bool) {
+    internal func log(
+        dataResponse: DataResponse<Data, AFError>,
+        logging: Bool,
+        multipartPayload: MultipartLogPayload? = nil
+    ) {
         guard logging else { return }
-        print(logDescription(dataResponse))
+        print(logDescription(dataResponse, multipartPayload: multipartPayload))
     }
 
-    private func logDescription(_ dataResponse: DataResponse<Data, AFError>) -> String {
+    private func logDescription(
+        _ dataResponse: DataResponse<Data, AFError>,
+        multipartPayload: MultipartLogPayload?
+    ) -> String {
         var lines = ["===== NETWORK ====="]
 
-        appendRequest(dataResponse.request, to: &lines)
+        appendRequest(dataResponse.request, multipartPayload: multipartPayload, to: &lines)
 
         lines.append("")
         lines.append("[cURL]")
@@ -34,7 +46,11 @@ extension DataRequest {
         return lines.joined(separator: "\n")
     }
 
-    private func appendRequest(_ request: URLRequest?, to lines: inout [String]) {
+    private func appendRequest(
+        _ request: URLRequest?,
+        multipartPayload: MultipartLogPayload?,
+        to lines: inout [String]
+    ) {
         lines.append("[Request]")
         guard let request else {
             lines.append("No URLRequest")
@@ -47,6 +63,9 @@ extension DataRequest {
         if let body = bodyString(request.httpBody) {
             lines.append("Body:")
             lines.append(indent(body))
+        } else if let multipartPayload {
+            lines.append("Body: multipart/form-data (streamed body; raw body unavailable)")
+            appendMultipartPayload(multipartPayload, to: &lines)
         } else {
             lines.append("Body: None")
         }
@@ -117,6 +136,53 @@ extension DataRequest {
     private func bodyString(_ data: Data?) -> String? {
         guard let data, !data.isEmpty else { return nil }
         return String(data: data, encoding: .utf8)
+    }
+
+    private func appendMultipartPayload(_ payload: MultipartLogPayload, to lines: inout [String]) {
+        lines.append("Multipart:")
+        lines.append("  Fields (\(payload.fields.count), \(payload.fields.reduce(0) { $0 + $1.data.count }) bytes):")
+        if payload.fields.isEmpty {
+            lines.append("    None")
+        } else {
+            payload.fields.forEach { field in
+                var line = "    - \(field.name): \(field.data.count) bytes"
+                if let mimeType = field.mimeType {
+                    line += ", mimeType=\(mimeType)"
+                }
+                lines.append(line)
+
+                if let preview = fieldPreview(field.data) {
+                    lines.append("      preview: \(preview)")
+                }
+            }
+        }
+
+        lines.append("  Files (\(payload.files.count), \(payload.files.reduce(0) { $0 + $1.data.count }) bytes):")
+        if payload.files.isEmpty {
+            lines.append("    None")
+        } else {
+            payload.files.forEach { file in
+                lines.append(
+                    "    - \(file.name): fileName=\(file.fileName), mimeType=\(file.mimeType), size=\(file.data.count) bytes"
+                )
+            }
+        }
+    }
+
+    private func fieldPreview(_ data: Data, limit: Int = 512) -> String? {
+        guard let string = String(data: data, encoding: .utf8),
+              string.isEmpty == false else {
+            return nil
+        }
+
+        let singleLine = string
+            .replacingOccurrences(of: "\r", with: "\\r")
+            .replacingOccurrences(of: "\n", with: "\\n")
+
+        guard singleLine.count > limit else {
+            return singleLine
+        }
+        return "\(singleLine.prefix(limit))... <truncated>"
     }
 
     private func indent(_ text: String) -> String {

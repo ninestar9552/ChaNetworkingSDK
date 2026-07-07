@@ -74,12 +74,17 @@ extension DataRequest {
     @available(iOS 15.0, macOS 12.0, watchOS 8.0, tvOS 15.0, *)
     internal func serializedResponse<T: Decodable>(
         using client: NetworkClient,
-        decoder: JSONDecoder
+        decoder: JSONDecoder,
+        multipartPayload: MultipartLogPayload? = nil
     ) async throws -> ApiResponse<T> {
 
         let dataResponse = await self.validate(statusCode: 200..<300).serializingData().response
 
-        self.log(dataResponse: dataResponse, logging: client.logging)
+        self.log(
+            dataResponse: dataResponse,
+            logging: client.logging,
+            multipartPayload: multipartPayload
+        )
 
         return try self.processResponse(dataResponse, decoder: decoder, errorHandler: client.errorHandler)
     }

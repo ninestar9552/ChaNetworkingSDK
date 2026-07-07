@@ -168,7 +168,11 @@ extension NetworkClient {
             uploadRequest.uploadProgress(closure: progress)
         }
 
-        return try await uploadRequest.serializedResponse(using: self, decoder: decoder)
+        return try await uploadRequest.serializedResponse(
+            using: self,
+            decoder: decoder,
+            multipartPayload: MultipartLogPayload(fields: fields, files: files)
+        )
     }
 
     // MARK: - Value-Only Response Methods
