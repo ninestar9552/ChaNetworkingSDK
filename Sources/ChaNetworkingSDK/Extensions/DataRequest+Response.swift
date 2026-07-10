@@ -86,7 +86,12 @@ extension DataRequest {
             multipartPayload: multipartPayload
         )
 
-        return try self.processResponse(dataResponse, decoder: decoder, errorHandler: client.errorHandler)
+        do {
+            return try self.processResponse(dataResponse, decoder: decoder, errorHandler: client.errorHandler)
+        } catch {
+            self.logProcessingError(error, logging: client.logging)
+            throw error
+        }
     }
 
     /// Alamofire 요청을 Combine Publisher로 변환하여 반환합니다.
@@ -115,8 +120,18 @@ extension DataRequest {
 
                 self.log(dataResponse: dataResponse, logging: client.logging)
 
-                return try self.processResponse(dataResponse, decoder: decoder, errorHandler: client.errorHandler)
+                do {
+                    return try self.processResponse(dataResponse, decoder: decoder, errorHandler: client.errorHandler)
+                } catch {
+                    self.logProcessingError(error, logging: client.logging)
+                    throw error
+                }
             }
             .eraseToAnyPublisher()
+    }
+
+    private func logProcessingError(_ error: Error, logging: Bool) {
+        guard logging else { return }
+        print("Response processing failed: \(error.localizedDescription)")
     }
 }
