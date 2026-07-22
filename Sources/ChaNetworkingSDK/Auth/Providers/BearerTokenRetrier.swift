@@ -133,7 +133,7 @@ public final class BearerTokenRetrier: RequestRetrier, @unchecked Sendable {
     // MARK: - Private Methods
 
     private func refreshTokens(completion: @escaping (Bool) -> Void) {
-        guard let refreshToken = tokenStorage.getRefreshToken() else {
+        guard let refreshToken = tokenStorage.getTokenPair()?.refreshToken else {
             completion(false)
             return
         }
@@ -149,8 +149,7 @@ public final class BearerTokenRetrier: RequestRetrier, @unchecked Sendable {
             case .success(let tokens):
                 // 새 토큰 저장
                 do {
-                    try self.tokenStorage.saveAccessToken(tokens.accessToken)
-                    try self.tokenStorage.saveRefreshToken(tokens.refreshToken)
+                    try self.tokenStorage.saveTokenPair(tokens)
                     completion(true)
                 } catch {
                     completion(false)

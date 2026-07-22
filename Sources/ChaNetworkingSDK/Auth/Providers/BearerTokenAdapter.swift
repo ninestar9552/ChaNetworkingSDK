@@ -29,7 +29,7 @@ public final class BearerTokenAdapter: RequestAdapter {
         var urlRequest = urlRequest
 
         // Access Token이 있으면 Authorization 헤더에 추가
-        if let accessToken = tokenStorage.getAccessToken() {
+        if let accessToken = tokenStorage.getTokenPair()?.accessToken {
             urlRequest.headers.add(.authorization(bearerToken: accessToken))
         }
 

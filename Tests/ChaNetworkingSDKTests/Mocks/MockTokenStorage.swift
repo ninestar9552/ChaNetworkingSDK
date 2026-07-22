@@ -11,37 +11,27 @@ import Foundation
 /// 테스트용 메모리 기반 Token 저장소 (Thread-Safe)
 final class MockTokenStorage: TokenStorage, @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.chanetworking.mocktokenstorage", attributes: .concurrent)
-    private var _accessToken: String?
-    private var _refreshToken: String?
+    private var _tokenPair: TokenPair?
+    private var _saveTokenPairCallCount = 0
 
-    func saveAccessToken(_ token: String) throws {
+    var saveTokenPairCallCount: Int {
+        queue.sync { _saveTokenPairCallCount }
+    }
+
+    func saveTokenPair(_ tokenPair: TokenPair) throws {
         queue.sync(flags: .barrier) {
-            self._accessToken = token
+            self._tokenPair = tokenPair
+            self._saveTokenPairCallCount += 1
         }
     }
 
-    func saveRefreshToken(_ token: String) throws {
-        queue.sync(flags: .barrier) {
-            self._refreshToken = token
-        }
-    }
-
-    func getAccessToken() -> String? {
-        return queue.sync {
-            return _accessToken
-        }
-    }
-
-    func getRefreshToken() -> String? {
-        return queue.sync {
-            return _refreshToken
-        }
+    func getTokenPair() -> TokenPair? {
+        queue.sync { _tokenPair }
     }
 
     func clearTokens() throws {
         queue.sync(flags: .barrier) {
-            self._accessToken = nil
-            self._refreshToken = nil
+            self._tokenPair = nil
         }
     }
 }

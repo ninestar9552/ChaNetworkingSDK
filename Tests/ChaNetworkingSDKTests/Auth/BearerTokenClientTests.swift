@@ -14,6 +14,19 @@ import Combine
 // MARK: - BearerTokenClient Tests
 final class BearerTokenClientTests {
 
+    private func storeTokenPair(
+        in tokenStorage: MockTokenStorage,
+        accessToken: String,
+        refreshToken: String = "test_refresh_token"
+    ) throws {
+        try tokenStorage.saveTokenPair(
+            TokenPair(
+                accessToken: accessToken,
+                refreshToken: refreshToken
+            )
+        )
+    }
+
     // Helper: 테스트용 클라이언트와 스토리지 생성
     func createTestClient() -> (client: BearerTokenClient, key: String, storage: MockTokenStorage) {
         let key = UUID().uuidString
@@ -48,7 +61,7 @@ final class BearerTokenClientTests {
     @Test func testCustomSessionConfigurationIsUsed() async throws {
         let key = UUID().uuidString
         let tokenStorage = MockTokenStorage()
-        try tokenStorage.saveAccessToken("test_access_token")
+        try storeTokenPair(in: tokenStorage, accessToken: "test_access_token")
 
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockURLProtocol.self]
@@ -91,7 +104,7 @@ final class BearerTokenClientTests {
     @Test func testAsyncRefreshInitializerUsesCustomSession() async throws {
         let key = UUID().uuidString
         let tokenStorage = MockTokenStorage()
-        try tokenStorage.saveAccessToken("test_access_token")
+        try storeTokenPair(in: tokenStorage, accessToken: "test_access_token")
 
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockURLProtocol.self]
@@ -157,7 +170,7 @@ final class BearerTokenClientTests {
     @Test func testAuthorizationHeaderAdded() async throws {
         // Given: 클라이언트 생성 및 토큰 저장
         let (client, key, tokenStorage) = createTestClient()
-        try tokenStorage.saveAccessToken("test_access_token")
+        try storeTokenPair(in: tokenStorage, accessToken: "test_access_token")
 
         var capturedAuthHeader: String?
         let mockJSON = #"{"id":1,"name":"Test User"}"#.data(using: .utf8)!
@@ -188,8 +201,11 @@ final class BearerTokenClientTests {
     @Test func testTokenRefreshOn401() async throws {
         // Given: 클라이언트 생성 및 만료된 토큰 저장
         let (client, key, tokenStorage) = createTestClient()
-        try tokenStorage.saveAccessToken("expired_token")
-        try tokenStorage.saveRefreshToken("valid_refresh_token")
+        try storeTokenPair(
+            in: tokenStorage,
+            accessToken: "expired_token",
+            refreshToken: "valid_refresh_token"
+        )
 
         var requestCount = 0
         var capturedAuthHeaderOnRetry: String?
@@ -228,14 +244,18 @@ final class BearerTokenClientTests {
         #expect(requestCount == 2)
         #expect(capturedAuthHeaderOnRetry == "Bearer new_access_token")
         #expect(response.httpResponse.statusCode == 200)
-        #expect(tokenStorage.getAccessToken() == "new_access_token")
-        #expect(tokenStorage.getRefreshToken() == "new_refresh_token")
+        #expect(tokenStorage.getTokenPair()?.accessToken == "new_access_token")
+        #expect(tokenStorage.getTokenPair()?.refreshToken == "new_refresh_token")
+        #expect(tokenStorage.saveTokenPairCallCount == 2)
     }
 
     @Test func testAsyncTokenRefreshOn401() async throws {
         let (client, key, tokenStorage) = createAsyncRefreshTestClient()
-        try tokenStorage.saveAccessToken("expired_token")
-        try tokenStorage.saveRefreshToken("valid_refresh_token")
+        try storeTokenPair(
+            in: tokenStorage,
+            accessToken: "expired_token",
+            refreshToken: "valid_refresh_token"
+        )
 
         var requestCount = 0
         var capturedAuthHeaderOnRetry: String?
@@ -269,16 +289,68 @@ final class BearerTokenClientTests {
         #expect(requestCount == 2)
         #expect(capturedAuthHeaderOnRetry == "Bearer async_access_token")
         #expect(response.httpResponse.statusCode == 200)
-        #expect(tokenStorage.getAccessToken() == "async_access_token")
-        #expect(tokenStorage.getRefreshToken() == "async_refresh_token")
+        #expect(tokenStorage.getTokenPair()?.accessToken == "async_access_token")
+        #expect(tokenStorage.getTokenPair()?.refreshToken == "async_refresh_token")
+        #expect(tokenStorage.saveTokenPairCallCount == 2)
+    }
+
+    @Test func testTokenRefreshKeepsCurrentRefreshTokenWhenServerDoesNotRotateIt() async throws {
+        let key = UUID().uuidString
+        let tokenStorage = MockTokenStorage()
+        try tokenStorage.saveTokenPair(
+            TokenPair(
+                accessToken: "expired_token",
+                refreshToken: "current_refresh_token"
+            )
+        )
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        configuration.httpAdditionalHeaders = ["X-Test-ID": key]
+
+        let client = BearerTokenClient(
+            baseURL: "https://api.example.com",
+            tokenStorage: tokenStorage,
+            asyncTokenRefresher: { currentRefreshToken in
+                TokenPair(
+                    accessToken: "new_access_token",
+                    refreshToken: currentRefreshToken
+                )
+            },
+            session: Session(configuration: configuration)
+        )
+
+        var requestCount = 0
+        let mockJSON = #"{"id":1,"name":"Test User"}"#.data(using: .utf8)!
+        MockURLProtocol.setHandler(key) { request in
+            requestCount += 1
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: requestCount == 1 ? 401 : 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, requestCount == 1 ? Data() : mockJSON)
+        }
+
+        let _: ApiResponse<MockUser> = try await client.get("/users/me")
+
+        #expect(requestCount == 2)
+        #expect(tokenStorage.getTokenPair()?.accessToken == "new_access_token")
+        #expect(tokenStorage.getTokenPair()?.refreshToken == "current_refresh_token")
+        #expect(tokenStorage.saveTokenPairCallCount == 2)
     }
 
     // MARK: - Max Retry Count Test
     @Test func testMaxRetryCount() async throws {
         // Given: 클라이언트 생성 및 만료된 토큰
         let (client, key, tokenStorage) = createTestClient()
-        try tokenStorage.saveAccessToken("expired_token")
-        try tokenStorage.saveRefreshToken("valid_refresh_token")
+        try storeTokenPair(
+            in: tokenStorage,
+            accessToken: "expired_token",
+            refreshToken: "valid_refresh_token"
+        )
 
         var requestCount = 0
         
@@ -316,7 +388,7 @@ final class BearerTokenClientTests {
     @Test func testValueOnlyWithAuth() async throws {
         // Given: 클라이언트 생성 및 토큰 저장
         let (client, key, tokenStorage) = createTestClient()
-        try tokenStorage.saveAccessToken("test_access_token")
+        try storeTokenPair(in: tokenStorage, accessToken: "test_access_token")
 
         var capturedAuthHeader: String?
         let mockJSON = #"{"id":1,"name":"Test User"}"#.data(using: .utf8)!
@@ -342,7 +414,7 @@ final class BearerTokenClientTests {
 
     @Test func testEncodableBodyAddsAuthorizationHeader() async throws {
         let (client, key, tokenStorage) = createTestClient()
-        try tokenStorage.saveAccessToken("test_access_token")
+        try storeTokenPair(in: tokenStorage, accessToken: "test_access_token")
 
         struct CreateUserRequest: Encodable, Sendable {
             let name: String
@@ -372,7 +444,7 @@ final class BearerTokenClientTests {
 
     @Test func testMultipartUploadAddsAuthorizationHeader() async throws {
         let (client, key, tokenStorage) = createTestClient()
-        try tokenStorage.saveAccessToken("test_access_token")
+        try storeTokenPair(in: tokenStorage, accessToken: "test_access_token")
 
         var capturedAuthHeader: String?
         let mockJSON = #"{"id":1,"name":"Uploaded"}"#.data(using: .utf8)!
@@ -398,7 +470,7 @@ final class BearerTokenClientTests {
 
     @Test func testPublisherAddsAuthorizationHeader() async throws {
         let (client, key, tokenStorage) = createTestClient()
-        try tokenStorage.saveAccessToken("test_access_token")
+        try storeTokenPair(in: tokenStorage, accessToken: "test_access_token")
 
         var capturedAuthHeader: String?
         let mockJSON = #"{"id":1,"name":"Test User"}"#.data(using: .utf8)!
@@ -429,7 +501,7 @@ final class BearerTokenClientTests {
     @Test func testSessionAndBearerInterceptorsAreCombined() async throws {
         let key = UUID().uuidString
         let tokenStorage = MockTokenStorage()
-        try tokenStorage.saveAccessToken("test_access_token")
+        try storeTokenPair(in: tokenStorage, accessToken: "test_access_token")
 
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockURLProtocol.self]
@@ -476,7 +548,7 @@ final class BearerTokenClientTests {
     @Test func testConvenienceMethods() async throws {
         // Given: 클라이언트 생성
         let (client, key, tokenStorage) = createTestClient()
-        try tokenStorage.saveAccessToken("test_token")
+        try storeTokenPair(in: tokenStorage, accessToken: "test_token")
         let mockJSON = #"{"id":1,"name":"Test"}"#.data(using: .utf8)!
         
         MockURLProtocol.setHandler(key) { request in
@@ -519,7 +591,7 @@ final class BearerTokenClientTests {
     @Test func testEmptyPayload() async throws {
         // Given: 클라이언트 생성
         let (client, key, tokenStorage) = createTestClient()
-        try tokenStorage.saveAccessToken("test_token")
+        try storeTokenPair(in: tokenStorage, accessToken: "test_token")
         
         MockURLProtocol.setHandler(key) { request in
             let response = HTTPURLResponse(
@@ -543,7 +615,7 @@ final class BearerTokenClientTests {
     @Test func testServerError() async throws {
         // Given: 클라이언트 생성
         let (client, key, tokenStorage) = createTestClient()
-        try tokenStorage.saveAccessToken("test_token")
+        try storeTokenPair(in: tokenStorage, accessToken: "test_token")
 
         let mockJSON = #"{"error":"Not Found"}"#.data(using: .utf8)!
         MockURLProtocol.setHandler(key) { request in
@@ -574,7 +646,7 @@ final class BearerTokenClientTests {
     @Test func testURLBuilding() async throws {
         // Given: 클라이언트 생성
         let (client, key, tokenStorage) = createTestClient()
-        try tokenStorage.saveAccessToken("test_token")
+        try storeTokenPair(in: tokenStorage, accessToken: "test_token")
 
         var capturedURLs: [String] = []
         let mockJSON = #"{"id":1,"name":"Test"}"#.data(using: .utf8)!
