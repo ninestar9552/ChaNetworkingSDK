@@ -25,6 +25,8 @@ open class BearerTokenClient: NetworkClient, EndpointClient {
     ///   - baseURL: API Base URL (예: "https://api.example.com")
     ///   - tokenStorage: Token 저장소 (기본값: KeychainTokenStorage)
     ///   - tokenRefresher: Token 갱신 로직을 구현한 클로저
+    ///   - shouldInvalidateAuthentication: refresh 오류가 인증정보를 무효화하는지 판단하는 클로저
+    ///   - onAuthenticationInvalidated: 저장된 인증정보가 제거된 뒤 호출되는 이벤트
     ///   - session: Alamofire Session (기본값: 새 기본 Session)
     ///   - encoding: 파라미터 인코딩 전략 (기본값: JSONEncoding)
     ///   - errorHandler: 에러 핸들러 (기본값: DefaultNetworkErrorHandler)
@@ -33,6 +35,8 @@ open class BearerTokenClient: NetworkClient, EndpointClient {
         baseURL: String,
         tokenStorage: TokenStorage = KeychainTokenStorage(),
         tokenRefresher: @escaping TokenRefreshHandler,
+        shouldInvalidateAuthentication: @escaping AuthenticationInvalidationEvaluator = { _ in false },
+        onAuthenticationInvalidated: @escaping AuthenticationInvalidationHandler = {},
         session: Session = Session(),
         encoding: ParameterEncoding = JSONEncoding.default,
         errorHandler: NetworkErrorHandler = DefaultNetworkErrorHandler(),
@@ -45,7 +49,10 @@ open class BearerTokenClient: NetworkClient, EndpointClient {
         let adapter = BearerTokenAdapter(tokenStorage: tokenStorage)
         let retrier = BearerTokenRetrier(
             tokenStorage: tokenStorage,
-            tokenRefresher: tokenRefresher
+            tokenRefresher: tokenRefresher,
+            shouldInvalidateAuthentication: shouldInvalidateAuthentication,
+            onAuthenticationInvalidated: onAuthenticationInvalidated,
+            logging: logging
         )
 
         // Interceptor로 결합
@@ -68,6 +75,8 @@ open class BearerTokenClient: NetworkClient, EndpointClient {
         baseURL: String,
         tokenStorage: TokenStorage = KeychainTokenStorage(),
         asyncTokenRefresher: @escaping AsyncTokenRefreshHandler,
+        shouldInvalidateAuthentication: @escaping AuthenticationInvalidationEvaluator = { _ in false },
+        onAuthenticationInvalidated: @escaping AuthenticationInvalidationHandler = {},
         session: Session = Session(),
         encoding: ParameterEncoding = JSONEncoding.default,
         errorHandler: NetworkErrorHandler = DefaultNetworkErrorHandler(),
@@ -87,6 +96,8 @@ open class BearerTokenClient: NetworkClient, EndpointClient {
                     }
                 }
             },
+            shouldInvalidateAuthentication: shouldInvalidateAuthentication,
+            onAuthenticationInvalidated: onAuthenticationInvalidated,
             session: session,
             encoding: encoding,
             errorHandler: errorHandler,

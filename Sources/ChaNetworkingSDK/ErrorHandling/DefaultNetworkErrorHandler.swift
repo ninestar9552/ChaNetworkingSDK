@@ -15,6 +15,10 @@ public struct DefaultNetworkErrorHandler: NetworkErrorHandler {
     public init() {}
 
     public func transform(response: HTTPURLResponse?, data: Data?, error: AFError?) -> Error? {
+        if case .requestRetryFailed(let retryError, _) = error {
+            return retryError
+        }
+
         guard let response = response else {
             if let error = error { return NetworkError.underlying(error) }
             return NetworkError.noResponse
