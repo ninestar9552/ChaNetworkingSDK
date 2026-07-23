@@ -377,9 +377,27 @@ let client = BearerTokenClient(
             accessToken: response.accessToken,
             refreshToken: response.refreshToken
         )
-    }
+    },
+    shouldInvalidateAuthentication: { error in
+        // 서비스 서버의 refresh token 만료·무효 오류만 true로 분류합니다.
+        (error as? APIError)?.invalidatesAuthentication == true
+    },
+    onAuthenticationInvalidated: {
+        // 화면 이동은 여기서 직접 수행하지 않고 앱 session에 종료 event를 전달합니다.
+        appSession.endAuthenticatedSession()
+    },
+    logging: true
 )
 ```
+
+refresh 요청의 timeout, 네트워크 단절과 일시적인 5xx처럼 인증정보가 무효라고 확정할 수 없는 오류는
+`shouldInvalidateAuthentication`에서 `false`를 반환합니다. 이 경우 SDK는 token pair를 유지하고 실제 refresh
+오류를 원래 API 호출자에게 전달하므로, 서비스 앱이 요청을 시작한 화면에서 알림·재시도·조용한 실패 중 적절한
+UI 정책을 선택할 수 있습니다.
+
+저장된 refresh token 부재, 갱신된 token pair 저장 실패, refresh 성공 후 재요청의 두 번째 401은 SDK가
+인증정보를 제거하고 `onAuthenticationInvalidated`를 호출합니다. 각 Feature가 401을 반복해서 처리할 필요는 없습니다.
+`logging`을 활성화하면 이 판단 과정도 `[ChaNetworkingSDK][BearerAuth]` 로그로 출력됩니다.
 
 서버가 refresh token rotation을 사용하지 않아 갱신 응답에 새 refresh token을 포함하지 않는다면, 현재 refresh token을 그대로 반환합니다.
 
@@ -416,6 +434,8 @@ print("상태: \(response.httpResponse.statusCode)")
 - ✅ 토큰 갱신 성공 시 실패한 요청 자동 재시도 (1번)
 - ✅ 여러 요청이 동시에 401을 받아도 토큰 갱신은 1번만 실행
 - ✅ 토큰 갱신 중인 다른 요청들은 대기 후 갱신된 토큰으로 재시도
+- ✅ 인증 무효 오류와 일시적인 갱신 실패를 구분해 token pair 유지 여부 결정
+- ✅ 인증정보가 무효화되면 서비스 앱 session에 단일 callback 전달
 
 ### 토큰 저장소
 
